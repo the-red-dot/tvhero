@@ -1,0 +1,72 @@
+/* MediaCard.css */
+
+/* Make the button container distribute buttons evenly */
+.button-container {
+  display: flex;       /* Ensures flex layout */
+  gap: 10px;           /* Spacing between buttons */
+  width: 100%;         /* Container takes full width */
+}
+
+/* Make each button take equal horizontal space */
+.button-container button {
+  flex: 1 1 0;         /* Grow and shrink equally */
+  text-align: center;  /* Center the text */
+}
+
+/* Status button base */
+.status-button {
+  background-color: #444;
+  border: none;
+  color: #fff;
+  padding: 5px 0; /* vertical padding only (width controlled by flex) */
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.3s;
+}
+
+.status-button:hover {
+  background-color: #555;
+}
+
+/* If status is "watched", style differently */
+.status-button.watched {
+  background-color: #28a745;
+}
+
+/* If status is "to-watch", style differently */
+.status-button.to-watch {
+  background-color: #17a2b8;
+}
+
+/* Remove button styles */
+.remove-button {
+  background-color: #dc3545;
+  border: none;
+  color: #fff;
+  padding: 5px 0; /* vertical padding only */
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.3s;
+}
+
+.remove-button:hover {
+  background-color: #c82333;
+}
+
+/* Add button styles */
+.add-button {
+  background-color: #007bff;
+  border: none;
+  color: #fff;
+  padding: 5px 0; /* vertical padding only */
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.3s;
+}
+
+.add-button:hover {
+  background-color: #0056b3;
+}

@@ -420,62 +420,6 @@ h1 {
   width: 100%;
 }
 
-/* Status button styles */
-.status-button {
-  background-color: #444;
-  border: none;
-  color: #fff;
-  padding: 5px 10px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: background-color 0.3s;
-}
-
-.status-button.watched {
-  background-color: #28a745;
-}
-
-.status-button.to-watch {
-  background-color: #17a2b8;
-}
-
-.status-button:hover {
-  background-color: #555;
-}
-
-/* Remove button styles */
-.remove-button {
-  background-color: #dc3545;
-  border: none;
-  color: #fff;
-  padding: 5px 10px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: background-color 0.3s;
-}
-
-.remove-button:hover {
-  background-color: #c82333;
-}
-
-/* Add button styles */
-.add-button {
-  background-color: #007bff;
-  border: none;
-  color: #fff;
-  padding: 5px 10px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: background-color 0.3s;
-}
-
-.add-button:hover {
-  background-color: #0056b3;
-}
-
 /* Sidebar Menu */
 .sidebar {
   position: fixed;
@@ -569,78 +513,6 @@ h1 {
   display: block;
 }
 
-/* Popup styles */
-.add-popup {
-  display: none;
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: #2a2a2a;
-  border: 1px solid #555;
-  border-radius: 10px;
-  padding: 20px;
-  z-index: 2000;
-  max-width: 300px;
-  width: 90%;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-}
-
-.add-popup h3 {
-  margin-top: 0;
-  text-align: center;
-}
-
-.add-popup ul {
-  list-style: none;
-  padding: 0;
-  margin: 10px 0;
-}
-
-.add-popup li {
-  padding: 10px;
-  border-bottom: 1px solid #444;
-  cursor: pointer;
-}
-
-.add-popup li:last-child {
-  border-bottom: none;
-}
-
-.add-popup li:hover {
-  background-color: #444;
-}
-
-.add-popup button {
-  margin-top: 15px;
-  padding: 8px 16px;
-  background-color: #dc3545;
-  border: none;
-  color: #fff;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.add-popup button:hover {
-  background-color: #c82333;
-}
-
-/* Add popup overlay */
-.add-popup-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: none;
-  z-index: 1500;
-}
-
-.add-popup-overlay.active {
-  display: block;
-}
-
 /* Mobile adjustments */
 @media (max-width: 600px) {
   h1 {
@@ -699,11 +571,6 @@ h1 {
     height: 200px;
   }
 
-  .add-popup {
-    max-width: 90%;
-    width: 90%;
-  }
-
   .button-container button {
     padding: 5px 8px;
     font-size: 10px;
@@ -757,7 +624,3 @@ h1 {
   max-width: 100px;
 }
 
-.add-popup {
-  width: 90%;
-  max-width: 300px;
-}

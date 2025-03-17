@@ -1,0 +1,110 @@
+/* AddPopup.css */
+
+/* Container for the popup content */
+.add-popup-container {
+    padding: 20px;
+  }
+  
+  /* Title styling */
+  .add-popup-title {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 1.5em;
+    color: #ffcc00;
+  }
+  
+  /* Form layout */
+  .add-popup-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  /* Checkbox group layout (one library per line) */
+  .checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* space between each row */
+  }
+  
+  /* Checkbox label styling */
+  .checkbox-label {
+    display: flex;        /* circle + text on the same row */
+    align-items: center;  /* vertically center them */
+    cursor: pointer;
+    font-size: 16px;
+    color: #fff;
+  }
+  
+  /* Hide the native checkbox input */
+  .checkbox-input {
+    display: none;
+  }
+  
+  /* Custom checkbox appearance */
+  .checkbox-custom {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ffcc00;
+    border-radius: 50%;
+    margin-right: 10px; /* space between the circle and library text */
+    position: relative;
+  }
+  
+  /* When checkbox is checked, fill the circle */
+  .checkbox-input:checked + .checkbox-custom::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 10px;
+    background-color: #ffcc00;
+    border-radius: 50%;
+  }
+  
+  /* No libraries message */
+  .no-libraries {
+    text-align: center;
+    color: #ccc;
+    font-size: 16px;
+  }
+  
+  /* Button group layout */
+  .add-popup-buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  
+  /* Submit and Cancel buttons styling */
+  .submit-button,
+  .cancel-button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .submit-button {
+    background-color: #007bff;
+    color: #fff;
+  }
+  
+  .submit-button:hover {
+    background-color: #0056b3;
+  }
+  
+  .cancel-button {
+    background-color: #dc3545;
+    color: #fff;
+  }
+  
+  .cancel-button:hover {
+    background-color: #c82333;
+  }
+  

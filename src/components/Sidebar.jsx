@@ -12,24 +12,31 @@ function Sidebar({
   setLibraries,
   user,
 }) {
+  // Hebrew collator for sorting
+  const hebrewCollator = new Intl.Collator('he');
+
+  const sortMediaItems = (items) => {
+    return items.sort((a, b) =>
+      hebrewCollator.compare(a.hebrewTitle || '', b.hebrewTitle || '')
+    );
+  };
+
   const handleLibraryClick = (libName) => {
     setCurrentLibrary(libName);
-    setMediaItems(libraries[libName] || []);
+    const items = libraries[libName] ? [...libraries[libName]] : [];
+    setMediaItems(sortMediaItems(items));
     onClose();
   };
 
-  // Create a new library, update local state, and save to Firebase
   const handleCreateLibrary = async () => {
     const libName = prompt('הכנס שם לספרייה החדשה:');
     if (libName) {
       if (!libraries[libName]) {
-        // Update local state
         const updatedLibraries = { ...libraries, [libName]: [] };
         setLibraries(updatedLibraries);
         setCurrentLibrary(libName);
         setMediaItems([]);
         onClose();
-        // If user is logged in, persist to Firebase
         if (user) {
           try {
             const libDocRef = doc(db, 'users', user.uid, 'libraries', libName);
@@ -44,7 +51,6 @@ function Sidebar({
     }
   };
 
-  // Rename an existing library (except main library)
   const handleRenameLibrary = async (oldName) => {
     const newName = prompt('הכנס שם חדש לספרייה:', oldName);
     if (newName && newName !== oldName) {
@@ -52,16 +58,14 @@ function Sidebar({
         alert('ספרייה עם שם זה כבר קיימת.');
         return;
       }
-      // Update local state
       const updatedLibraries = { ...libraries };
       updatedLibraries[newName] = updatedLibraries[oldName];
       delete updatedLibraries[oldName];
       setLibraries(updatedLibraries);
       if (currentLibrary === oldName) {
         setCurrentLibrary(newName);
-        setMediaItems(updatedLibraries[newName] || []);
+        setMediaItems(updatedLibraries[newName] ? sortMediaItems([...updatedLibraries[newName]]) : []);
       }
-      // Update Firebase if logged in
       if (user) {
         try {
           const oldDocRef = doc(db, 'users', user.uid, 'libraries', oldName);
@@ -78,7 +82,6 @@ function Sidebar({
     }
   };
 
-  // Delete an existing library (except main library)
   const handleDeleteLibrary = async (libName) => {
     if (window.confirm(`האם אתה בטוח שברצונך למחוק את הספרייה "${libName}"?`)) {
       const updatedLibraries = { ...libraries };
@@ -86,9 +89,9 @@ function Sidebar({
       setLibraries(updatedLibraries);
       if (currentLibrary === libName) {
         setCurrentLibrary('חיפוש מדיה חכם');
-        setMediaItems(updatedLibraries['חיפוש מדיה חכם'] || []);
+        const mainItems = updatedLibraries['חיפוש מדיה חכם'] || [];
+        setMediaItems(sortMediaItems([...mainItems]));
       }
-      // Delete from Firebase if logged in
       if (user) {
         try {
           const libDocRef = doc(db, 'users', user.uid, 'libraries', libName);
@@ -105,7 +108,6 @@ function Sidebar({
       <div className={isOpen ? 'sidebar active' : 'sidebar'} id="sidebar">
         <ul id="library-list">
           {Object.keys(libraries).map((libName) =>
-            // Optionally skip the main library from the list
             libName === 'חיפוש מדיה חכם' ? null : (
               <li key={libName}>
                 <span className="library-name" onClick={() => handleLibraryClick(libName)}>
