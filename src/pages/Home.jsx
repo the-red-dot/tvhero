@@ -28,11 +28,12 @@ function Home() {
     items.sort((a, b) => hebrewCollator.compare(a.hebrewTitle || '', b.hebrewTitle || ''));
 
   useEffect(() => {
+    // Listen for auth changes (make sure your listenToAuthChanges is refactored for React)
     listenToAuthChanges(async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
         const libs = await loadUserData(firebaseUser.uid);
-        // If there's a saved smart search in localStorage, merge it
+        // Merge any saved smart search results from localStorage
         const savedSmart = localStorage.getItem('smartSearchResults');
         if (savedSmart) {
           try {
@@ -52,6 +53,7 @@ function Home() {
       }
     });
 
+    // Also listen for a custom "userDataLoaded" event (if used)
     const handleUserDataLoaded = (event) => {
       const { libraries } = event.detail;
       const savedSmart = localStorage.getItem('smartSearchResults');
@@ -96,17 +98,18 @@ function Home() {
     }
   };
 
-  // “הוספה” from a MediaCard
+  // “הוספה” from a MediaCard – this sets the media to add and opens the popup.
   const handleMediaAdd = (media) => {
     setMediaToAdd(media);
     setIsAddPopupOpen(true);
   };
 
-  // Final step: user picks libraries in AddPopup
+  // When the user confirms in the AddPopup, update all selected libraries.
   const handleAddMediaToLibraries = async (selectedLibraries) => {
     if (!mediaToAdd || !user) return;
     for (const libName of selectedLibraries) {
       const libMedia = libraries[libName] ? [...libraries[libName]] : [];
+      // Only add if it doesn't already exist
       if (!libMedia.some((m) => m.tmdbId === mediaToAdd.tmdbId)) {
         libMedia.push(mediaToAdd);
         const sorted = sortMediaItems(libMedia);
@@ -127,7 +130,7 @@ function Home() {
     setMediaToAdd(null);
   };
 
-  // “הסר” from a MediaCard
+  // “הסר” a media item from the current library.
   const handleRemoveMedia = async (media) => {
     if (window.confirm(`האם אתה בטוח שברצונך להסיר את הפריט "${media.hebrewTitle}"?`)) {
       const updated = (libraries[currentLibrary] || []).filter((m) => m.tmdbId !== media.tmdbId);
@@ -165,6 +168,9 @@ function Home() {
       ) : (
         <StandardSearchBar
           user={user}
+          currentLibrary={currentLibrary}
+          libraries={libraries}
+          setLibraries={setLibraries}
           setMediaItems={setMediaItems}
         />
       )}

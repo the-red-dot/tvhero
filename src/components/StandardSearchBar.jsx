@@ -1,8 +1,8 @@
-// src/components/StandardSearchBar.jsx
 import React, { useState, useEffect } from 'react';
 import { isHebrew } from '../utils/helpers';
+import { db, doc, setDoc } from '../utils/firebase';
 
-function StandardSearchBar({ user, setMediaItems }) {
+function StandardSearchBar({ user, currentLibrary, libraries, setLibraries, setMediaItems }) {
   const [query, setQuery] = useState('');
   const [mediaType, setMediaType] = useState('all');
   const [searchResults, setSearchResults] = useState([]);
@@ -24,11 +24,9 @@ function StandardSearchBar({ user, setMediaItems }) {
     try {
       setSearchResults([{ id: 'loading', title: 'מחפש...' }]);
       const language = isHebrew(q) ? 'he' : 'en-US';
-
-      // Possibly do TV + Movie if mt === 'all'
+      // Search for TV and/or movies
       const tvData = (mt === 'tv' || mt === 'all') ? await tmdbSearch('tv', q, language) : [];
       const movieData = (mt === 'movie' || mt === 'all') ? await tmdbSearch('movie', q, language) : [];
-
       const combined = [
         ...tvData.map((it) => ({ ...it, type: 'tv' })),
         ...movieData.map((it) => ({ ...it, type: 'movie' })),
@@ -40,7 +38,6 @@ function StandardSearchBar({ user, setMediaItems }) {
     }
   }
 
-  // Minimal search call
   async function tmdbSearch(t, q, lang) {
     const encodedQuery = encodeURIComponent(q);
     const tmdbUrl = `/search/${t}?language=${lang}&query=${encodedQuery}`;
@@ -51,15 +48,15 @@ function StandardSearchBar({ user, setMediaItems }) {
     return data.results;
   }
 
-  // We fetch the final Hebrew+English details after user clicks a single result
+  // Fetch full media details from TMDB (Hebrew and English)
   async function fetchFullMediaDetails(tmdbId, fallbackType) {
-    // 1) Hebrew fetch
+    // Hebrew fetch
     const heUrl = `/${fallbackType}/${tmdbId}?language=he`;
     const heEncoded = encodeURIComponent(heUrl);
     const heResp = await fetch(`/api/tmdb?url=${heEncoded}&type=${fallbackType}&id=${tmdbId}&season=&language=he`);
     const heData = await heResp.json();
 
-    // 2) English fetch
+    // English fetch
     const enUrl = `/${fallbackType}/${tmdbId}?language=en-US`;
     const enEncoded = encodeURIComponent(enUrl);
     const enResp = await fetch(`/api/tmdb?url=${enEncoded}&type=${fallbackType}&id=${tmdbId}&season=&language=en-US`);
@@ -88,13 +85,25 @@ function StandardSearchBar({ user, setMediaItems }) {
     };
   }
 
-  // On user selecting a single result
+  // On user selecting a search result:
   async function handleSearchResultClick(item) {
     const fallbackType = item.type || (item.title ? 'movie' : 'tv');
     const details = await fetchFullMediaDetails(item.id, fallbackType);
 
-    // Add final details to mediaItems
+    // Update local state: add to mediaItems
     setMediaItems((prev) => [...prev, details]);
+
+    // Also update the current library in Firestore if a user is logged in
+    if (user && currentLibrary) {
+      const updatedLibrary = [...(libraries[currentLibrary] || []), details];
+      setLibraries((prev) => ({ ...prev, [currentLibrary]: updatedLibrary }));
+      try {
+        const libDocRef = doc(db, 'users', user.uid, 'libraries', currentLibrary);
+        await setDoc(libDocRef, { media: updatedLibrary }, { merge: true });
+      } catch (error) {
+        console.error('Error updating Firestore library:', error);
+      }
+    }
 
     // Clear search
     setSearchResults([]);
@@ -128,9 +137,7 @@ function StandardSearchBar({ user, setMediaItems }) {
           ) : (
             searchResults.map((item) => {
               const releaseDate = item.release_date || item.first_air_date;
-              const releaseYear = releaseDate
-                ? new Date(releaseDate).getFullYear()
-                : 'N/A';
+              const releaseYear = releaseDate ? new Date(releaseDate).getFullYear() : 'N/A';
               const displayTitle = item.title || item.name || '';
               return (
                 <div
