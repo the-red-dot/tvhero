@@ -1,9 +1,6 @@
 // src/components/StandardSearchBar.jsx
 import React, { useState, useEffect } from 'react';
-
-function isHebrew(text) {
-  return /[\u0590-\u05FF]/.test(text);
-}
+import { isHebrew } from '../utils/helpers';
 
 function StandardSearchBar({ user, setMediaItems }) {
   const [query, setQuery] = useState('');
@@ -55,13 +52,13 @@ function StandardSearchBar({ user, setMediaItems }) {
       : 'N/A';
     const newMedia = {
       title: item.title || item.name || '',
-      hebrewTitle: '', // Can be updated later with more details
+      hebrewTitle: '', // Update later if needed
       year: releaseYear,
       tmdbId: item.id,
       type: item.type || 'movie',
       poster: item.poster_path
         ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
-        : 'https://via.placeholder.com/300x450?text=No+Image'
+        : 'https://placehold.co/300x450?text=No+Image'
     };
     setMediaItems((prev) => [...prev, newMedia]);
     setSearchResults([]);
