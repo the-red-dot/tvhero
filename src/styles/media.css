@@ -12,6 +12,7 @@
   width: 100%;
   text-align: center;
   margin-bottom: 20px;
+  background-color: transparent; /* Override the gray background from index.css */
 }
 
 .media-header h1 {
@@ -102,11 +103,11 @@
 }
 
 .detail-status-button.watched {
-  background-color: #28a745; /* Green for watched, consistent with common UI patterns */
+  background-color: #28a745; /* Green for watched */
 }
 
 .detail-status-button.to-watch {
-  background-color: #007bff; /* Blue for to-watch, consistent with common UI patterns */
+  background-color: #007bff; /* Blue for to-watch */
 }
 
 /* Trailer Container */
