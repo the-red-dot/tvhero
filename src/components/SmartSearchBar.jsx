@@ -1,6 +1,8 @@
+// src/components/SmartSearchBar.jsx
 import React, { useState } from 'react';
 import { isHebrew } from '../utils/helpers';
 import { db, doc, setDoc } from '../utils/firebase';
+import '../styles/searchbar.css';  
 
 const SMART_LIBRARY = 'חיפוש מדיה חכם';
 
@@ -14,22 +16,17 @@ function SmartSearchBar({ user, libraries, setLibraries, setMediaItems }) {
     const heEncoded = encodeURIComponent(heUrl);
     const heResp = await fetch(`/api/tmdb?url=${heEncoded}&type=${fallbackType}&id=${tmdbId}&season=&language=he`);
     const heData = await heResp.json();
-
     const enUrl = `/${fallbackType}/${tmdbId}?language=en-US`;
     const enEncoded = encodeURIComponent(enUrl);
     const enResp = await fetch(`/api/tmdb?url=${enEncoded}&type=${fallbackType}&id=${tmdbId}&season=&language=en-US`);
     const enData = await enResp.json();
-
     const poster = heData.poster_path
       ? `https://image.tmdb.org/t/p/w500${heData.poster_path}`
       : 'https://placehold.co/300x450?text=No+Image';
-
     const hebrewTitle = heData.title || heData.name || 'אין כותרת בעברית';
     const englishTitle = enData.title || enData.name || 'אין כותרת באנגלית';
-
     const rawDate = heData.release_date || heData.first_air_date || enData.release_date || enData.first_air_date;
     const year = rawDate ? new Date(rawDate).getFullYear() : 'N/A';
-
     return {
       title: englishTitle,
       hebrewTitle,
@@ -78,14 +75,13 @@ function SmartSearchBar({ user, libraries, setLibraries, setMediaItems }) {
       return;
     }
     setLoading(true);
-
     try {
-      // 1) Clear old results from the SMART_LIBRARY
+      // Clear old results from SMART_LIBRARY
       const updatedLibs = { ...libraries, [SMART_LIBRARY]: [] };
       setLibraries(updatedLibs);
       setMediaItems([]);
 
-      // 2) Call /api/openai
+      // Call /api/openai
       const resp = await fetch('/api/openai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -98,14 +94,14 @@ function SmartSearchBar({ user, libraries, setLibraries, setMediaItems }) {
         return;
       }
 
-      // 3) Extract AI names
+      // Extract AI names
       const aiResponse = data.choices[0].message.content;
       const mediaNames = aiResponse.split(',')
         .map((n) => n.trim())
         .filter((n) => n !== '');
       console.log('AI media names:', mediaNames);
 
-      // 4) For each name => doSingleNameTMDBSearch => pick top => fetch full details
+      // For each name, search and get full media details
       const finalMediaItems = [];
       for (const name of mediaNames) {
         const results = await doSingleNameTMDBSearch(name, mediaType);
@@ -117,20 +113,19 @@ function SmartSearchBar({ user, libraries, setLibraries, setMediaItems }) {
         }
       }
 
-      // 5) Update local state and libraries
+      // Update state and libraries
       setMediaItems(finalMediaItems);
       const finalLibs = { ...updatedLibs, [SMART_LIBRARY]: finalMediaItems };
       setLibraries(finalLibs);
 
-      // 6) Update Firestore for SMART_LIBRARY
+      // Update Firestore for SMART_LIBRARY
       if (user) {
         const libDocRef = doc(db, 'users', user.uid, 'libraries', SMART_LIBRARY);
         await setDoc(libDocRef, { media: finalMediaItems }, { merge: true });
       }
 
-      // 7) Save to localStorage (if desired)
+      // Optionally save to localStorage
       localStorage.setItem('smartSearchResults', JSON.stringify(finalMediaItems));
-
       setQuery('');
     } catch (error) {
       console.error('Error with AI Search:', error);
@@ -150,7 +145,6 @@ function SmartSearchBar({ user, libraries, setLibraries, setMediaItems }) {
         <option value="movie">סרטים</option>
         <option value="tv">סדרות</option>
       </select>
-
       <input
         type="text"
         className="smart-search-input"
@@ -158,8 +152,7 @@ function SmartSearchBar({ user, libraries, setLibraries, setMediaItems }) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-
-      <button onClick={handleSmartSearch} disabled={loading}>
+      <button className="smart-search-button" onClick={handleSmartSearch} disabled={loading}>
         {loading ? 'מחפש...' : 'חיפוש חכם'}
       </button>
     </div>
