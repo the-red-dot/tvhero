@@ -19,13 +19,7 @@
     text-align: center;
     font-size: 1.8em;
   }
-  
-  /* Modal body for auth */
-  .auth-modal .modal-body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
+ 
   
   /* Form styling */
   .auth-form {

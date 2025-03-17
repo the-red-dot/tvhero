@@ -2,13 +2,16 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
-import './index.css';         // Global styles
-import './styles/media.css';  // Media page styles
+import { LibraryProvider } from './utils/LibraryContext';
+import './index.css';
+import './styles/media.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
-      <App />
+      <LibraryProvider>
+        <App />
+      </LibraryProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

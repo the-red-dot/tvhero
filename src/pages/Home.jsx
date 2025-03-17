@@ -1,115 +1,40 @@
 // src/pages/Home.jsx
-import React, { useState, useEffect } from 'react';
-import Header from '../components/Header';
-import Sidebar from '../components/Sidebar';
+import React, { useContext, useState } from 'react';
+import { LibraryContext } from '../utils/LibraryContext';
 import SmartSearchBar from '../components/SmartSearchBar';
 import StandardSearchBar from '../components/StandardSearchBar';
 import MediaGrid from '../components/MediaGrid';
 import AddPopup from '../components/AddPopup';
-import AuthModal from '../components/AuthModal';
 import { cloneMediaArray } from '../utils/helpers';
-import { listenToAuthChanges, loadUserData, handleLogout } from '../utils/auth';
 import { db, doc, setDoc } from '../utils/firebase';
 
 function Home() {
-  const [libraries, setLibraries] = useState({});
-  const [currentLibrary, setCurrentLibrary] = useState('חיפוש מדיה חכם');
-  const [mediaItems, setMediaItems] = useState([]);
-  const [user, setUser] = useState(null);
+  // Access shared state from LibraryContext
+  const { libraries, setLibraries, currentLibrary, mediaItems, setMediaItems, user } =
+    useContext(LibraryContext);
 
-  // Manage sidebar, auth modal, add popup
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  // Local state for managing the AddPopup
   const [isAddPopupOpen, setIsAddPopupOpen] = useState(false);
   const [mediaToAdd, setMediaToAdd] = useState(null);
 
+  // Hebrew collator for sorting media items by Hebrew title
   const hebrewCollator = new Intl.Collator('he');
   const sortMediaItems = (items) =>
     items.sort((a, b) => hebrewCollator.compare(a.hebrewTitle || '', b.hebrewTitle || ''));
 
-  useEffect(() => {
-    // Listen for auth changes (make sure your listenToAuthChanges is refactored for React)
-    listenToAuthChanges(async (firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        const libs = await loadUserData(firebaseUser.uid);
-        // Merge any saved smart search results from localStorage
-        const savedSmart = localStorage.getItem('smartSearchResults');
-        if (savedSmart) {
-          try {
-            const parsed = JSON.parse(savedSmart);
-            libs['חיפוש מדיה חכם'] = parsed;
-          } catch (err) {
-            console.error('Error parsing localStorage smartSearchResults:', err);
-          }
-        }
-        setLibraries(libs);
-        setCurrentLibrary('חיפוש מדיה חכם');
-        const sorted = sortMediaItems(cloneMediaArray(libs['חיפוש מדיה חכם'] || []));
-        setMediaItems(sorted);
-      } else {
-        setLibraries({});
-        setMediaItems([]);
-      }
-    });
-
-    // Also listen for a custom "userDataLoaded" event (if used)
-    const handleUserDataLoaded = (event) => {
-      const { libraries } = event.detail;
-      const savedSmart = localStorage.getItem('smartSearchResults');
-      if (savedSmart) {
-        try {
-          const parsed = JSON.parse(savedSmart);
-          libraries['חיפוש מדיה חכם'] = parsed;
-        } catch (err) {
-          console.error('Error parsing localStorage:', err);
-        }
-      }
-      setLibraries(libraries);
-      setCurrentLibrary('חיפוש מדיה חכם');
-      const sorted = sortMediaItems(cloneMediaArray(libraries['חיפוש מדיה חכם'] || []));
-      setMediaItems(sorted);
-    };
-    window.addEventListener('userDataLoaded', handleUserDataLoaded);
-    return () => {
-      window.removeEventListener('userDataLoaded', handleUserDataLoaded);
-    };
-  }, []);
-
-  const handleToggleSidebar = () => {
-    setIsSidebarOpen((prev) => !prev);
-  };
-
-  const handleOpenAuth = () => {
-    setIsAuthOpen(true);
-  };
-  const handleCloseAuth = () => {
-    setIsAuthOpen(false);
-  };
-
-  const onLogout = async () => {
-    try {
-      await handleLogout();
-      setUser(null);
-      setLibraries({});
-      setMediaItems([]);
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
-  // “הוספה” from a MediaCard – this sets the media to add and opens the popup.
+  // Handle clicking "הוספה" from a MediaCard
   const handleMediaAdd = (media) => {
     setMediaToAdd(media);
     setIsAddPopupOpen(true);
   };
 
-  // When the user confirms in the AddPopup, update all selected libraries.
+  // Add media to selected libraries when confirmed in AddPopup
   const handleAddMediaToLibraries = async (selectedLibraries) => {
     if (!mediaToAdd || !user) return;
+
     for (const libName of selectedLibraries) {
       const libMedia = libraries[libName] ? [...libraries[libName]] : [];
-      // Only add if it doesn't already exist
+      // Only add if the media doesn't already exist in the library
       if (!libMedia.some((m) => m.tmdbId === mediaToAdd.tmdbId)) {
         libMedia.push(mediaToAdd);
         const sorted = sortMediaItems(libMedia);
@@ -130,7 +55,7 @@ function Home() {
     setMediaToAdd(null);
   };
 
-  // “הסר” a media item from the current library.
+  // Remove a media item from the current library
   const handleRemoveMedia = async (media) => {
     if (window.confirm(`האם אתה בטוח שברצונך להסיר את הפריט "${media.hebrewTitle}"?`)) {
       const updated = (libraries[currentLibrary] || []).filter((m) => m.tmdbId !== media.tmdbId);
@@ -150,14 +75,7 @@ function Home() {
 
   return (
     <div className={currentLibrary === 'חיפוש מדיה חכם' ? 'main-library' : ''}>
-      <Header
-        currentLibrary={currentLibrary}
-        onBurgerClick={handleToggleSidebar}
-        onLoginClick={handleOpenAuth}
-        user={user}
-        onLogout={onLogout}
-      />
-
+      {/* Render SmartSearchBar or StandardSearchBar based on currentLibrary */}
       {currentLibrary === 'חיפוש מדיה חכם' ? (
         <SmartSearchBar
           user={user}
@@ -175,23 +93,14 @@ function Home() {
         />
       )}
 
-      <Sidebar
-        libraries={libraries}
-        currentLibrary={currentLibrary}
-        setCurrentLibrary={setCurrentLibrary}
-        setMediaItems={(items) => setMediaItems(sortMediaItems(items))}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        setLibraries={setLibraries}
-        user={user}
-      />
-
+      {/* Display the media items in a grid */}
       <MediaGrid
         mediaItems={mediaItems}
         onRemoveMedia={handleRemoveMedia}
         onAddMedia={handleMediaAdd}
       />
 
+      {/* Popup for adding media to libraries */}
       <AddPopup
         isOpen={isAddPopupOpen}
         onClose={() => {
@@ -202,8 +111,6 @@ function Home() {
         currentLibrary={currentLibrary}
         onAdd={handleAddMediaToLibraries}
       />
-
-      <AuthModal isOpen={isAuthOpen} onClose={handleCloseAuth} />
     </div>
   );
 }
