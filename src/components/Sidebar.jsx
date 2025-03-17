@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate for navigation
 import { doc, setDoc, deleteDoc, getDoc } from '../utils/firebase';
 import { db } from '../utils/firebase';
 
@@ -12,6 +13,8 @@ function Sidebar({
   setLibraries,
   user,
 }) {
+  const navigate = useNavigate(); // Hook for programmatic navigation
+
   // Hebrew collator for sorting
   const hebrewCollator = new Intl.Collator('he');
 
@@ -26,6 +29,7 @@ function Sidebar({
     const items = libraries[libName] ? [...libraries[libName]] : [];
     setMediaItems(sortMediaItems(items));
     onClose();
+    navigate('/'); // Navigate to the Home page
   };
 
   const handleCreateLibrary = async () => {
@@ -37,6 +41,7 @@ function Sidebar({
         setCurrentLibrary(libName);
         setMediaItems([]);
         onClose();
+        navigate('/'); // Navigate to the Home page
         if (user) {
           try {
             const libDocRef = doc(db, 'users', user.uid, 'libraries', libName);
@@ -65,6 +70,7 @@ function Sidebar({
       if (currentLibrary === oldName) {
         setCurrentLibrary(newName);
         setMediaItems(updatedLibraries[newName] ? sortMediaItems([...updatedLibraries[newName]]) : []);
+        navigate('/'); // Navigate to the Home page
       }
       if (user) {
         try {
@@ -91,6 +97,7 @@ function Sidebar({
         setCurrentLibrary('חיפוש מדיה חכם');
         const mainItems = updatedLibraries['חיפוש מדיה חכם'] || [];
         setMediaItems(sortMediaItems([...mainItems]));
+        navigate('/'); // Navigate to the Home page
       }
       if (user) {
         try {
