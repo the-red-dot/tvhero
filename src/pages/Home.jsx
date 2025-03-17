@@ -1,7 +1,9 @@
+// src/pages/Home.jsx
 import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
-import SearchBar from '../components/SearchBar';
+import SmartSearchBar from '../components/SmartSearchBar';
+import StandardSearchBar from '../components/StandardSearchBar';
 import MediaGrid from '../components/MediaGrid';
 import AddPopup from '../components/AddPopup';
 import AuthModal from '../components/AuthModal';
@@ -23,7 +25,6 @@ function Home() {
 
   // Create a Hebrew collator for sorting (א–ת)
   const hebrewCollator = new Intl.Collator('he');
-
   const sortMediaItems = (items) => {
     return items.sort((a, b) =>
       hebrewCollator.compare(a.hebrewTitle || '', b.hebrewTitle || '')
@@ -31,11 +32,10 @@ function Home() {
   };
 
   useEffect(() => {
-    // Listen to Firebase auth changes and load libraries from Firestore
-    listenToAuthChanges(async (user) => {
-      setUser(user);
-      if (user) {
-        const libs = await loadUserData(user.uid);
+    listenToAuthChanges(async (firebaseUser) => {
+      setUser(firebaseUser);
+      if (firebaseUser) {
+        const libs = await loadUserData(firebaseUser.uid);
         setLibraries(libs);
         setCurrentLibrary('חיפוש מדיה חכם');
         const sortedItems = sortMediaItems(cloneMediaArray(libs['חיפוש מדיה חכם'] || []));
@@ -81,7 +81,7 @@ function Home() {
     }
   };
 
-  // When the user clicks "הוספה" on a media card
+  // When the user clicks "הוספה" on a media card, open the AddPopup.
   const handleMediaAdd = (media) => {
     setMediaToAdd(media);
     setIsAddPopupOpen(true);
@@ -90,16 +90,14 @@ function Home() {
   // Called by AddPopup when the user selects one or more libraries (as an array)
   const handleAddMediaToLibraries = async (selectedLibraries) => {
     if (!mediaToAdd || !user) return;
-    // For each target library, add the media if not already present
     for (const targetLibrary of selectedLibraries) {
       const targetMedia = libraries[targetLibrary] ? [...libraries[targetLibrary]] : [];
       if (targetMedia.some(item => item.tmdbId === mediaToAdd.tmdbId)) {
-        // Already exists; skip
+        // Skip if already exists
         continue;
       }
       targetMedia.push(mediaToAdd);
       const sortedTargetMedia = sortMediaItems(targetMedia);
-      // Update local state for that library
       setLibraries((prev) => ({
         ...prev,
         [targetLibrary]: sortedTargetMedia,
@@ -116,7 +114,7 @@ function Home() {
     setMediaToAdd(null);
   };
 
-  // Remove media callback – update local state immediately, then Firestore
+  // Remove media callback – update local state immediately, then Firestore.
   const handleRemoveMedia = async (media) => {
     if (window.confirm(`האם אתה בטוח שברצונך להסיר את הפריט "${media.hebrewTitle}"?`)) {
       const updatedMedia = (libraries[currentLibrary] || []).filter(item => item.tmdbId !== media.tmdbId);
@@ -142,13 +140,12 @@ function Home() {
         onLogout={onLogout}
       />
 
-      <SearchBar
-        currentLibrary={currentLibrary}
-        setMediaItems={setMediaItems}
-        libraries={libraries}
-        setLibraries={setLibraries}
-        user={user}
-      />
+      {/* Conditionally render the appropriate search bar */}
+      {currentLibrary === 'חיפוש מדיה חכם' ? (
+        <SmartSearchBar user={user} setMediaItems={setMediaItems} />
+      ) : (
+        <StandardSearchBar user={user} setMediaItems={setMediaItems} />
+      )}
 
       <Sidebar
         libraries={libraries}
@@ -169,7 +166,10 @@ function Home() {
 
       <AddPopup
         isOpen={isAddPopupOpen}
-        onClose={() => { setIsAddPopupOpen(false); setMediaToAdd(null); }}
+        onClose={() => {
+          setIsAddPopupOpen(false);
+          setMediaToAdd(null);
+        }}
         libraries={libraries}
         currentLibrary={currentLibrary}
         onAdd={handleAddMediaToLibraries}
