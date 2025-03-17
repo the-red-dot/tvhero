@@ -1,9 +1,7 @@
-// src/pages/Home.jsx
 import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
-import SmartSearchBar from '../components/SmartSearchBar';
-import StandardSearchBar from '../components/StandardSearchBar';
+import SearchBar from '../components/SearchBar';
 import MediaGrid from '../components/MediaGrid';
 import AddPopup from '../components/AddPopup';
 import AuthModal from '../components/AuthModal';
@@ -23,7 +21,9 @@ function Home() {
   const [isAddPopupOpen, setIsAddPopupOpen] = useState(false);
   const [mediaToAdd, setMediaToAdd] = useState(null);
 
+  // Create a Hebrew collator for sorting (א–ת)
   const hebrewCollator = new Intl.Collator('he');
+
   const sortMediaItems = (items) => {
     return items.sort((a, b) =>
       hebrewCollator.compare(a.hebrewTitle || '', b.hebrewTitle || '')
@@ -31,20 +31,11 @@ function Home() {
   };
 
   useEffect(() => {
-    listenToAuthChanges(async (firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        const libs = await loadUserData(firebaseUser.uid);
-        // Restore smart search results from localStorage, if available.
-        const savedSmart = localStorage.getItem('smartSearchResults');
-        if (savedSmart) {
-          try {
-            const parsed = JSON.parse(savedSmart);
-            libs['חיפוש מדיה חכם'] = parsed;
-          } catch (err) {
-            console.error('Error parsing localStorage smartSearchResults:', err);
-          }
-        }
+    // Listen to Firebase auth changes and load libraries from Firestore
+    listenToAuthChanges(async (user) => {
+      setUser(user);
+      if (user) {
+        const libs = await loadUserData(user.uid);
         setLibraries(libs);
         setCurrentLibrary('חיפוש מדיה חכם');
         const sortedItems = sortMediaItems(cloneMediaArray(libs['חיפוש מדיה חכם'] || []));
@@ -57,22 +48,11 @@ function Home() {
 
     const handleUserDataLoaded = (event) => {
       const { libraries } = event.detail;
-      // Merge in localStorage smart search results
-      const savedSmart = localStorage.getItem('smartSearchResults');
-      if (savedSmart) {
-        try {
-          const parsed = JSON.parse(savedSmart);
-          libraries['חיפוש מדיה חכם'] = parsed;
-        } catch (err) {
-          console.error('Error parsing localStorage:', err);
-        }
-      }
       setLibraries(libraries);
       setCurrentLibrary('חיפוש מדיה חכם');
       const sortedItems = sortMediaItems(cloneMediaArray(libraries['חיפוש מדיה חכם'] || []));
       setMediaItems(sortedItems);
     };
-
     window.addEventListener('userDataLoaded', handleUserDataLoaded);
     return () => {
       window.removeEventListener('userDataLoaded', handleUserDataLoaded);
@@ -86,7 +66,6 @@ function Home() {
   const handleOpenAuth = () => {
     setIsAuthOpen(true);
   };
-
   const handleCloseAuth = () => {
     setIsAuthOpen(false);
   };
@@ -102,7 +81,7 @@ function Home() {
     }
   };
 
-  // When the user clicks "הוספה" on a media card, open the AddPopup.
+  // When the user clicks "הוספה" on a media card
   const handleMediaAdd = (media) => {
     setMediaToAdd(media);
     setIsAddPopupOpen(true);
@@ -111,22 +90,25 @@ function Home() {
   // Called by AddPopup when the user selects one or more libraries (as an array)
   const handleAddMediaToLibraries = async (selectedLibraries) => {
     if (!mediaToAdd || !user) return;
-    for (const libName of selectedLibraries) {
-      const targetMedia = libraries[libName] ? [...libraries[libName]] : [];
+    // For each target library, add the media if not already present
+    for (const targetLibrary of selectedLibraries) {
+      const targetMedia = libraries[targetLibrary] ? [...libraries[targetLibrary]] : [];
       if (targetMedia.some(item => item.tmdbId === mediaToAdd.tmdbId)) {
+        // Already exists; skip
         continue;
       }
       targetMedia.push(mediaToAdd);
       const sortedTargetMedia = sortMediaItems(targetMedia);
+      // Update local state for that library
       setLibraries((prev) => ({
         ...prev,
-        [libName]: sortedTargetMedia,
+        [targetLibrary]: sortedTargetMedia,
       }));
       try {
-        const libDocRef = doc(db, 'users', user.uid, 'libraries', libName);
+        const libDocRef = doc(db, 'users', user.uid, 'libraries', targetLibrary);
         await setDoc(libDocRef, { media: sortedTargetMedia }, { merge: true });
       } catch (error) {
-        console.error(`Error adding media to library ${libName} in Firestore:`, error);
+        console.error(`Error adding media to ${targetLibrary} in Firestore:`, error);
       }
     }
     alert('הפריט נוסף לספריות הנבחרות.');
@@ -134,20 +116,18 @@ function Home() {
     setMediaToAdd(null);
   };
 
-  // Remove media callback – update local state immediately, then Firestore.
+  // Remove media callback – update local state immediately, then Firestore
   const handleRemoveMedia = async (media) => {
     if (window.confirm(`האם אתה בטוח שברצונך להסיר את הפריט "${media.hebrewTitle}"?`)) {
-      const updatedMedia = (libraries[currentLibrary] || []).filter(m => m.tmdbId !== media.tmdbId);
+      const updatedMedia = (libraries[currentLibrary] || []).filter(item => item.tmdbId !== media.tmdbId);
       const updatedLibraries = { ...libraries, [currentLibrary]: updatedMedia };
       setLibraries(updatedLibraries);
-      setMediaItems(sortMediaItems(updatedMedia));
-      if (user) {
-        try {
-          const libDocRef = doc(db, 'users', user.uid, 'libraries', currentLibrary);
-          await setDoc(libDocRef, { media: updatedMedia }, { merge: true });
-        } catch (error) {
-          console.error('Error removing media from Firestore:', error);
-        }
+      setMediaItems(sortMediaItems([...updatedMedia]));
+      try {
+        const libDocRef = doc(db, 'users', user.uid, 'libraries', currentLibrary);
+        await setDoc(libDocRef, { media: updatedMedia }, { merge: true });
+      } catch (error) {
+        console.error('Error removing media from Firestore:', error);
       }
     }
   };
@@ -162,20 +142,13 @@ function Home() {
         onLogout={onLogout}
       />
 
-      {/* Conditionally render the appropriate search bar */}
-      {currentLibrary === 'חיפוש מדיה חכם' ? (
-        <SmartSearchBar
-          user={user}
-          libraries={libraries}
-          setLibraries={setLibraries}
-          setMediaItems={setMediaItems}
-        />
-      ) : (
-        <StandardSearchBar
-          user={user}
-          setMediaItems={setMediaItems}
-        />
-      )}
+      <SearchBar
+        currentLibrary={currentLibrary}
+        setMediaItems={setMediaItems}
+        libraries={libraries}
+        setLibraries={setLibraries}
+        user={user}
+      />
 
       <Sidebar
         libraries={libraries}
@@ -196,10 +169,7 @@ function Home() {
 
       <AddPopup
         isOpen={isAddPopupOpen}
-        onClose={() => {
-          setIsAddPopupOpen(false);
-          setMediaToAdd(null);
-        }}
+        onClose={() => { setIsAddPopupOpen(false); setMediaToAdd(null); }}
         libraries={libraries}
         currentLibrary={currentLibrary}
         onAdd={handleAddMediaToLibraries}
