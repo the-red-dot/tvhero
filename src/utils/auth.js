@@ -25,6 +25,7 @@ export function listenToAuthChanges(onUserChanged) {
 export async function handleLogin(email, password) {
   const userCredential = await signInWithEmailAndPassword(auth, email, password);
   if (!userCredential.user.emailVerified) {
+    // If email not verified, sign the user out and throw an error.
     await signOut(auth);
     throw new Error('אנא אמת את כתובת האימייל שלך לפני הכניסה.');
   }
@@ -35,7 +36,11 @@ export async function handleLogin(email, password) {
 export async function handleSignup(email, password) {
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   await sendEmailVerification(userCredential.user);
+  // Immediately sign out the user so that they are not logged in until verification.
+  await signOut(auth);
   console.log('User registered. Verification email sent to:', userCredential.user.email);
+  // Throw an error to inform the UI that the user must verify their email
+  throw new Error('נרשמת בהצלחה! אנא אמת את כתובת האימייל שלך לפני הכניסה.');
 }
 
 /** Send password reset email */

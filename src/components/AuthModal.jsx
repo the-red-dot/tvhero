@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
 import { handleLogin, handleSignup, sendPasswordReset } from '../utils/auth';
+import '../styles/authmodal.css'; // Import separate auth modal styles
 
 function AuthModal({ isOpen, onClose }) {
   const [isLoginMode, setIsLoginMode] = useState(true);
@@ -13,10 +14,12 @@ function AuthModal({ isOpen, onClose }) {
     try {
       if (isLoginMode) {
         await handleLogin(email, password);
+        onClose();
       } else {
+        // The handleSignup function now forces sign-out and throws an error
         await handleSignup(email, password);
+        // This point will never be reached because handleSignup throws an error.
       }
-      onClose();
     } catch (error) {
       setErrorMessage(error.message);
     }
@@ -25,18 +28,19 @@ function AuthModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <Modal isOpen={isOpen} onClose={onClose} className="auth-modal">
       <div className="modal-header">
         <h2>{isLoginMode ? 'התחברות' : 'הרשמה'}</h2>
       </div>
       <div className="modal-body">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="auth-form">
           <input
             type="email"
             placeholder="דואר אלקטרוני"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            className="auth-input"
           />
           <input
             type="password"
@@ -44,22 +48,26 @@ function AuthModal({ isOpen, onClose }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            className="auth-input"
           />
-          <button type="submit">{isLoginMode ? 'התחבר' : 'הרשם'}</button>
+          <button type="submit" className="auth-submit">
+            {isLoginMode ? 'התחבר' : 'הרשם'}
+          </button>
         </form>
-        <p>
+        <p className="auth-switch">
           {isLoginMode ? 'אין לך חשבון?' : 'כבר יש לך חשבון?'}{' '}
           <a
             href="#"
             onClick={(e) => {
               e.preventDefault();
               setIsLoginMode(!isLoginMode);
+              setErrorMessage('');
             }}
           >
             {isLoginMode ? 'הרשמה' : 'התחברות'}
           </a>
         </p>
-        <p>
+        <p className="auth-reset">
           <a
             href="#"
             onClick={(e) => {
@@ -70,7 +78,7 @@ function AuthModal({ isOpen, onClose }) {
             שכחת את הסיסמה?
           </a>
         </p>
-        {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+        {errorMessage && <p className="auth-error">{errorMessage}</p>}
       </div>
     </Modal>
   );

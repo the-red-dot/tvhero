@@ -1,0 +1,133 @@
+/* src/styles/authmodal.css */
+
+/* Container specific for auth modals */
+.auth-modal .modal-content {
+    background-color: #1c1c1c;
+    padding: 20px;
+    width: 80%;
+    max-width: 400px;
+    margin: 20px auto;  /* Added margin to keep content away from edges */
+    border-radius: 10px;
+    color: #fff;
+    position: relative;
+    overflow-y: auto;
+  }
+  
+  /* Modal header for auth */
+  .auth-modal .modal-header h2 {
+    margin-top: 0;
+    text-align: center;
+    font-size: 1.8em;
+  }
+  
+  /* Modal body for auth */
+  .auth-modal .modal-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  /* Form styling */
+  .auth-form {
+    width: 30%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  
+  /* Input styling */
+  .auth-input {
+    width: 100%;
+    padding: 10px;
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 5px;
+    font-size: 16px;
+    color: #fff;
+  }
+  
+  /* Submit button styling */
+  .auth-submit {
+    width: 100%;
+    padding: 10px;
+    background-color: #ffcc00;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .auth-submit:hover {
+    background-color: #e6b800;
+  }
+  
+  /* Switch mode link styling */
+  .auth-switch {
+    margin: 5px 0;
+    font-size: 14px;
+  }
+  
+  .auth-switch a {
+    color: #ffcc00;
+    text-decoration: none;
+    font-weight: bold;
+  }
+  
+  .auth-switch a:hover {
+    text-decoration: underline;
+  }
+  
+  /* Reset password link styling */
+  .auth-reset {
+    margin: 5px 0;
+    font-size: 14px;
+  }
+  
+  .auth-reset a {
+    color: #ffcc00;
+    text-decoration: none;
+    font-weight: bold;
+  }
+  
+  .auth-reset a:hover {
+    text-decoration: underline;
+  }
+  
+  /* Error message styling */
+  .auth-error {
+    color: #ff4d4d;
+    font-size: 14px;
+    margin-top: 5px;
+    text-align: center;
+  }
+  
+  /* Additional styling for EmailConfirmationModal */
+  .email-confirmation-modal .modal-header h2 {
+    font-size: 1.8em;
+  }
+  
+  .email-confirmation-modal .modal-body p {
+    font-size: 16px;
+    text-align: center;
+    margin-bottom: 15px;
+  }
+  
+  .email-confirmation-modal #resend-verification-button {
+    width: 80%;
+    padding: 10px;
+    background-color: #ffcc00;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .email-confirmation-modal #resend-verification-button:hover {
+    background-color: #e6b800;
+  }
+  
