@@ -19,15 +19,19 @@ function StandardSearchBar({ user, setMediaItems }) {
     return () => clearTimeout(timer);
   }, [query, mediaType, user]);
 
+  // For a single TMDB search
   async function doTMDBSearch(q, mt) {
     try {
       setSearchResults([{ id: 'loading', title: 'מחפש...' }]);
       const language = isHebrew(q) ? 'he' : 'en-US';
-      const tvData = (mt === 'tv' || mt === 'all') ? await tmdbFetch('tv', q, language) : [];
-      const movieData = (mt === 'movie' || mt === 'all') ? await tmdbFetch('movie', q, language) : [];
+
+      // Possibly do TV + Movie if mt === 'all'
+      const tvData = (mt === 'tv' || mt === 'all') ? await tmdbSearch('tv', q, language) : [];
+      const movieData = (mt === 'movie' || mt === 'all') ? await tmdbSearch('movie', q, language) : [];
+
       const combined = [
-        ...tvData.map((item) => ({ ...item, type: 'tv' })),
-        ...movieData.map((item) => ({ ...item, type: 'movie' }))
+        ...tvData.map((it) => ({ ...it, type: 'tv' })),
+        ...movieData.map((it) => ({ ...it, type: 'movie' })),
       ];
       setSearchResults(combined.slice(0, 10));
     } catch (error) {
@@ -36,31 +40,63 @@ function StandardSearchBar({ user, setMediaItems }) {
     }
   }
 
-  async function tmdbFetch(type, q, language) {
+  // Minimal search call
+  async function tmdbSearch(t, q, lang) {
     const encodedQuery = encodeURIComponent(q);
-    const tmdbUrl = `/search/${type}?language=${language}&query=${encodedQuery}`;
+    const tmdbUrl = `/search/${t}?language=${lang}&query=${encodedQuery}`;
     const encodedUrl = encodeURIComponent(tmdbUrl);
-    const response = await fetch(`/api/tmdb?url=${encodedUrl}&type=${type}&id=&season=&language=${language}`);
-    const data = await response.json();
+    const resp = await fetch(`/api/tmdb?url=${encodedUrl}&type=${t}&id=&season=&language=${lang}`);
+    const data = await resp.json();
     if (!data || !data.results) return [];
     return data.results;
   }
 
-  function handleSearchResultClick(item) {
-    const releaseYear = item.release_date || item.first_air_date
-      ? new Date(item.release_date || item.first_air_date).getFullYear()
-      : 'N/A';
-    const newMedia = {
-      title: item.title || item.name || '',
-      hebrewTitle: '', // Update later if needed
-      year: releaseYear,
-      tmdbId: item.id,
-      type: item.type || 'movie',
-      poster: item.poster_path
-        ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
-        : 'https://placehold.co/300x450?text=No+Image'
+  // We fetch the final Hebrew+English details after user clicks a single result
+  async function fetchFullMediaDetails(tmdbId, fallbackType) {
+    // 1) Hebrew fetch
+    const heUrl = `/${fallbackType}/${tmdbId}?language=he`;
+    const heEncoded = encodeURIComponent(heUrl);
+    const heResp = await fetch(`/api/tmdb?url=${heEncoded}&type=${fallbackType}&id=${tmdbId}&season=&language=he`);
+    const heData = await heResp.json();
+
+    // 2) English fetch
+    const enUrl = `/${fallbackType}/${tmdbId}?language=en-US`;
+    const enEncoded = encodeURIComponent(enUrl);
+    const enResp = await fetch(`/api/tmdb?url=${enEncoded}&type=${fallbackType}&id=${tmdbId}&season=&language=en-US`);
+    const enData = await enResp.json();
+
+    // Poster
+    const poster = heData.poster_path
+      ? `https://image.tmdb.org/t/p/w500${heData.poster_path}`
+      : 'https://placehold.co/300x450?text=No+Image';
+
+    // Titles
+    const hebrewTitle = heData.title || heData.name || 'אין כותרת בעברית';
+    const englishTitle = enData.title || enData.name || 'אין כותרת באנגלית';
+
+    // Year
+    const rawDate = heData.release_date || heData.first_air_date || enData.release_date || enData.first_air_date;
+    const year = rawDate ? new Date(rawDate).getFullYear() : 'N/A';
+
+    return {
+      title: englishTitle,
+      hebrewTitle,
+      year,
+      tmdbId,
+      type: fallbackType,
+      poster,
     };
-    setMediaItems((prev) => [...prev, newMedia]);
+  }
+
+  // On user selecting a single result
+  async function handleSearchResultClick(item) {
+    const fallbackType = item.type || (item.title ? 'movie' : 'tv');
+    const details = await fetchFullMediaDetails(item.id, fallbackType);
+
+    // Add final details to mediaItems
+    setMediaItems((prev) => [...prev, details]);
+
+    // Clear search
     setSearchResults([]);
     setQuery('');
   }
@@ -76,6 +112,7 @@ function StandardSearchBar({ user, setMediaItems }) {
         <option value="movie">סרטים</option>
         <option value="tv">סדרות</option>
       </select>
+
       <input
         type="text"
         className="standard-search-input"
@@ -83,16 +120,18 @@ function StandardSearchBar({ user, setMediaItems }) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
+
       {searchResults.length > 0 && (
         <div className="search-results">
           {searchResults[0].id === 'loading' ? (
             <div className="search-result-item">מחפש...</div>
           ) : (
             searchResults.map((item) => {
-              const releaseYear = item.release_date || item.first_air_date
-                ? new Date(item.release_date || item.first_air_date).getFullYear()
+              const releaseDate = item.release_date || item.first_air_date;
+              const releaseYear = releaseDate
+                ? new Date(releaseDate).getFullYear()
                 : 'N/A';
-              const displayTitle = item.title || item.name;
+              const displayTitle = item.title || item.name || '';
               return (
                 <div
                   key={`${item.id}-${item.type}`}

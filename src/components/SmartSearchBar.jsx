@@ -1,6 +1,6 @@
 // src/components/SmartSearchBar.jsx
 import React, { useState } from 'react';
-import { isHebrew } from '../utils/helpers'; // Use named export
+import { isHebrew } from '../utils/helpers';
 
 const SMART_LIBRARY = 'חיפוש מדיה חכם';
 
@@ -9,34 +9,73 @@ function SmartSearchBar({ user, libraries, setLibraries, setMediaItems }) {
   const [mediaType, setMediaType] = useState('all');
   const [loading, setLoading] = useState(false);
 
-  // For each name from OpenAI, perform a TMDB search
+  // A helper that calls our /api/tmdb for Hebrew + English details
+  async function fetchFullMediaDetails(tmdbId, fallbackType) {
+    // fallbackType is "tv" or "movie"
+    // 1) Hebrew fetch
+    const heUrl = `/${fallbackType}/${tmdbId}?language=he`;
+    const heEncoded = encodeURIComponent(heUrl);
+    const heResp = await fetch(`/api/tmdb?url=${heEncoded}&type=${fallbackType}&id=${tmdbId}&season=&language=he`);
+    const heData = await heResp.json();
+
+    // 2) English fetch
+    const enUrl = `/${fallbackType}/${tmdbId}?language=en-US`;
+    const enEncoded = encodeURIComponent(enUrl);
+    const enResp = await fetch(`/api/tmdb?url=${enEncoded}&type=${fallbackType}&id=${tmdbId}&season=&language=en-US`);
+    const enData = await enResp.json();
+
+    // Poster
+    const poster = heData.poster_path
+      ? `https://image.tmdb.org/t/p/w500${heData.poster_path}`
+      : 'https://placehold.co/300x450?text=No+Image';
+
+    // Titles
+    const hebrewTitle = heData.title || heData.name || 'אין כותרת בעברית';
+    const englishTitle = enData.title || enData.name || 'אין כותרת באנגלית';
+
+    // Year
+    const rawDate = heData.release_date || heData.first_air_date || enData.release_date || enData.first_air_date;
+    const year = rawDate ? new Date(rawDate).getFullYear() : 'N/A';
+
+    return {
+      title: englishTitle,
+      hebrewTitle,
+      year,
+      tmdbId,
+      type: fallbackType,
+      poster,
+    };
+  }
+
+  // For each name from OpenAI, do a minimal TMDB search (like "top result")
   async function doSingleNameTMDBSearch(name, type) {
     const language = isHebrew(name) ? 'he' : 'en-US';
     let tvData = [];
     let movieData = [];
+
     if (type === 'tv' || type === 'all') {
-      const tvResults = await tmdbFetch('tv', name, language);
-      tvData = tvResults.map(item => ({ ...item, type: 'tv' }));
+      const tvResults = await tmdbSearch('tv', name, language);
+      tvData = tvResults.map((it) => ({ ...it, type: 'tv' }));
     }
     if (type === 'movie' || type === 'all') {
-      const movieResults = await tmdbFetch('movie', name, language);
-      movieData = movieResults.map(item => ({ ...item, type: 'movie' }));
+      const movieResults = await tmdbSearch('movie', name, language);
+      movieData = movieResults.map((it) => ({ ...it, type: 'movie' }));
     }
     return [...tvData, ...movieData];
   }
 
-  // Helper to call our local /api/tmdb endpoint
-  async function tmdbFetch(t, q, language) {
+  // Minimal search call to /api/tmdb
+  async function tmdbSearch(t, q, lang) {
     const encodedQuery = encodeURIComponent(q);
-    const tmdbUrl = `/search/${t}?language=${language}&query=${encodedQuery}`;
+    const tmdbUrl = `/search/${t}?language=${lang}&query=${encodedQuery}`;
     const encodedUrl = encodeURIComponent(tmdbUrl);
     try {
-      const response = await fetch(`/api/tmdb?url=${encodedUrl}&type=${t}&id=&season=&language=${language}`);
-      const data = await response.json();
+      const resp = await fetch(`/api/tmdb?url=${encodedUrl}&type=${t}&id=&season=&language=${lang}`);
+      const data = await resp.json();
       if (!data || !data.results) return [];
       return data.results;
     } catch (error) {
-      console.error('Error in tmdbFetch for SmartSearchBar:', error);
+      console.error('Error in tmdbSearch for SmartSearchBar:', error);
       return [];
     }
   }
@@ -48,58 +87,55 @@ function SmartSearchBar({ user, libraries, setLibraries, setMediaItems }) {
       return;
     }
     setLoading(true);
+
     try {
-      // Clear old results from the smart library and media items
-      const updatedLibraries = { ...libraries, [SMART_LIBRARY]: [] };
-      setLibraries(updatedLibraries);
+      // 1) Clear old results from the SMART_LIBRARY
+      const updatedLibs = { ...libraries, [SMART_LIBRARY]: [] };
+      setLibraries(updatedLibs);
       setMediaItems([]);
 
-      // Call our local /api/openai endpoint
-      const response = await fetch('/api/openai', {
+      // 2) Call /api/openai
+      const resp = await fetch('/api/openai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: query, mediaType })
+        body: JSON.stringify({ prompt: query, mediaType }),
       });
-      const data = await response.json();
+      const data = await resp.json();
       if (data.error) {
-        alert("שגיאה בחיפוש חכם");
+        alert('שגיאה בחיפוש חכם');
         setLoading(false);
         return;
       }
+
+      // 3) Extract AI names
       const aiResponse = data.choices[0].message.content;
-      const mediaNames = aiResponse
-        .split(',')
-        .map(n => n.trim())
-        .filter(n => n !== '');
+      const mediaNames = aiResponse.split(',')
+        .map((n) => n.trim())
+        .filter((n) => n !== '');
       console.log('AI media names:', mediaNames);
 
-      let newMediaItems = [];
+      // 4) For each name => doSingleNameTMDBSearch => pick top => fetchFullMediaDetails
+      const finalMediaItems = [];
       for (const name of mediaNames) {
         const results = await doSingleNameTMDBSearch(name, mediaType);
         if (results.length > 0) {
-          // Choose the top result for simplicity
-          const item = results[0];
-          const releaseYear = item.release_date || item.first_air_date
-            ? new Date(item.release_date || item.first_air_date).getFullYear()
-            : 'N/A';
-          const newMedia = {
-            title: item.title || item.name || '',
-            hebrewTitle: '', // Optionally fetch more details later
-            year: releaseYear,
-            tmdbId: item.id,
-            type: item.type || (item.title ? 'movie' : 'tv'),
-            poster: item.poster_path
-              ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
-              : 'https://placehold.co/300x450?text=No+Image'
-          };
-          newMediaItems.push(newMedia);
+          // pick top result
+          const top = results[0];
+          const fallbackType = top.type || (top.title ? 'movie' : 'tv');
+          // fetch full Hebrew + English details
+          const full = await fetchFullMediaDetails(top.id, fallbackType);
+          finalMediaItems.push(full);
         }
       }
-      setMediaItems(newMediaItems);
-      const finalLibs = { ...updatedLibraries, [SMART_LIBRARY]: newMediaItems };
+
+      // 5) Update state
+      setMediaItems(finalMediaItems);
+      const finalLibs = { ...updatedLibs, [SMART_LIBRARY]: finalMediaItems };
       setLibraries(finalLibs);
-      // Save results to localStorage for persistence across refreshes
-      localStorage.setItem('smartSearchResults', JSON.stringify(newMediaItems));
+
+      // 6) Save to localStorage
+      localStorage.setItem('smartSearchResults', JSON.stringify(finalMediaItems));
+
       setQuery('');
     } catch (error) {
       console.error('Error with AI Search:', error);
@@ -119,6 +155,7 @@ function SmartSearchBar({ user, libraries, setLibraries, setMediaItems }) {
         <option value="movie">סרטים</option>
         <option value="tv">סדרות</option>
       </select>
+
       <input
         type="text"
         className="smart-search-input"
@@ -126,6 +163,7 @@ function SmartSearchBar({ user, libraries, setLibraries, setMediaItems }) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
+
       <button onClick={handleSmartSearch} disabled={loading}>
         {loading ? 'מחפש...' : 'חיפוש חכם'}
       </button>

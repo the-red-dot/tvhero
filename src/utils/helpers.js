@@ -1,4 +1,6 @@
 // src/utils/helpers.js
+
+// 1) Clones a single media object
 export function cloneMedia(media) {
   return {
     title: media.title,
@@ -10,11 +12,12 @@ export function cloneMedia(media) {
   };
 }
 
+// 2) Clones an array of media objects
 export function cloneMediaArray(mediaArray) {
   return mediaArray.map((media) => cloneMedia(media));
 }
 
-// Add your isHebrew helper as a named export:
+// 3) Checks if text has Hebrew characters
 export function isHebrew(text) {
   return /[\u0590-\u05FF]/.test(text);
 }
