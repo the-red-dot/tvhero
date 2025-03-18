@@ -16,19 +16,24 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5500",
-        "https://tvhero-git-main-gera-fines-projects.vercel.app/",
-        "https://d5aa-2a10-8012-f-9d50-11c9-3f56-bee5-590c.ngrok-free.app",
+        "https://tvhero-git-main-geras-projects-5ef45cdd.vercel.app/",
+        "https://1ed5-2a10-8012-f-9d50-a0da-8c70-edfb-3eb5.ngrok-free.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
 @app.get("/fetch_stream")
-async def fetch_stream(request: Request, title: str, season: int = None, episode: int = None):
+async def fetch_stream(
+    request: Request, title: str, season: int = None, episode: int = None
+):
     try:
         logger.info(f"Request headers: {request.headers}")
-        logger.info(f"Fetching stream for title: {title}, season: {season}, episode: {episode}")
+        logger.info(
+            f"Fetching stream for title: {title}, season: {season}, episode: {episode}"
+        )
         # Perform a search for the given title
         search_results = await Search(title).get_page(1)
         if not search_results:
@@ -53,7 +58,9 @@ async def fetch_stream(request: Request, title: str, season: int = None, episode
         if not selected_translator:
             if available_translators:
                 selected_translator = available_translators[0]
-                logger.info(f"No preferred translator available. Falling back to '{selected_translator}'.")
+                logger.info(
+                    f"No preferred translator available. Falling back to '{selected_translator}'."
+                )
                 warning_message = "לא נמצא דיבוב באנגלית"
             else:
                 logger.error("No translators available.")
@@ -71,7 +78,9 @@ async def fetch_stream(request: Request, title: str, season: int = None, episode
                 if season is None or episode is None:
                     logger.warning("Season and episode required for TV series.")
                     return {"error": "שנה ופרק נדרשים לסדרת טלוויזיה."}
-                stream = rezka.getStream(season=season, episode=episode, translation=selected_translator)
+                stream = rezka.getStream(
+                    season=season, episode=episode, translation=selected_translator
+                )
             else:
                 stream = rezka.getStream(translation=selected_translator)
 
@@ -82,8 +91,14 @@ async def fetch_stream(request: Request, title: str, season: int = None, episode
                 try:
                     stream_url = stream(resolution)
                     if stream_url:
-                        stream_urls[resolution] = stream_url[0] if isinstance(stream_url, list) else stream_url
-                        logger.info(f"Stream URL for {resolution}: {stream_urls[resolution]}")
+                        stream_urls[resolution] = (
+                            stream_url[0]
+                            if isinstance(stream_url, list)
+                            else stream_url
+                        )
+                        logger.info(
+                            f"Stream URL for {resolution}: {stream_urls[resolution]}"
+                        )
                 except Exception as e:
                     logger.error(f"Error fetching stream URL for {resolution}: {e}")
                     stream_urls[resolution] = None
