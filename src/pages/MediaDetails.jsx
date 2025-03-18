@@ -506,7 +506,7 @@ function MediaDetails() {
                 <option key={res} value={res}>{res}</option>
               ))}
             </select>
-            <p>מספר סגמנטים ב-HLS: {segmentCount > 0 ? segmentCount : 'לא זמין'}</p>
+            {/* <p>מספר סגמנטים ב-HLS: {segmentCount > 0 ? segmentCount : 'לא זמין'}</p> */}
             <video ref={videoRef} controls className="media-video" />
           </div>
         </div>
