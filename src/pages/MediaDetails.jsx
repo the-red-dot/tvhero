@@ -385,7 +385,7 @@ function MediaDetails() {
       if (Hls.isSupported()) {
         // Always use hls.js for HLS streams
         hlsRef.current = new Hls({
-          maxBufferLength: 120, // Buffer up to 60 seconds ahead
+          maxBufferLength: 480, // Buffer up to 60 seconds ahead
         });
         hlsRef.current.loadSource(videoSrc);
         hlsRef.current.attachMedia(videoRef.current);
