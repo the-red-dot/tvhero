@@ -5,6 +5,7 @@
   max-width: 1200px;
   margin: 20px auto;
   padding: 0 20px;
+  background-color: transparent; /* Ensure no background interference */
 }
 
 /* Media Header */
@@ -12,7 +13,7 @@
   width: 100%;
   text-align: center;
   margin-bottom: 20px;
-  background-color: transparent; /* Override the gray background from index.css */
+  background-color: transparent; /* Override any background */
 }
 
 .media-header h1 {
@@ -20,18 +21,6 @@
   color: #ffcc00;
   font-size: 2em;
   margin: 0;
-}
-
-@media (max-width: 768px) {
-  .media-header h1 {
-    font-size: 1.5em;
-  }
-}
-
-@media (max-width: 480px) {
-  .media-header h1 {
-    font-size: 1.2em;
-  }
 }
 
 /* Media Details Flex Layout */
@@ -70,12 +59,14 @@
   line-height: 1.6;
   text-align: justify;
   margin-bottom: 20px;
+  color: #fff; /* Ensure text is visible on dark background */
 }
 
 #media-description strong {
   display: inline-block;
   width: 120px;
   margin-right: 10px;
+  color: #ffcc00; /* Highlight labels */
 }
 
 /* Rating and Status Container */
@@ -141,6 +132,29 @@
   color: #fff;
 }
 
+.season-episode-container h2 {
+  margin-top: 0;
+  font-size: 1.5em;
+  color: #ffcc00;
+}
+
+.selectors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.selectors label {
+  font-size: 14px;
+  margin-right: 5px;
+}
+
+.episode-details h3 {
+  font-size: 1.2em;
+  color: #ffcc00;
+}
+
 /* Subtitle Controls Container */
 .subtitle-controls-container {
   margin-top: 40px;
@@ -148,6 +162,93 @@
   background-color: #2a2a2a;
   border-radius: 10px;
   color: #fff;
+}
+
+.subtitle-controls-container h2 {
+  margin-top: 0;
+  font-size: 1.5em;
+  color: #ffcc00;
+}
+
+/* Resolution Dropdown and Video Player */
+.movie-stream-container select,
+.season-episode-container select {
+  background-color: #333;
+  color: #fff;
+  border: 1px solid #555;
+  padding: 5px;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  width: 200px;
+  max-width: 100%;
+}
+
+.movie-stream-container label,
+.season-episode-container label {
+  font-size: 14px;
+  margin-right: 5px;
+}
+
+.media-video {
+  width: 100%;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+}
+
+/* Subtitle Controls */
+.subtitle-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.control-group label {
+  font-size: 14px;
+}
+
+.control-group input,
+.control-group select {
+  padding: 5px;
+  border-radius: 5px;
+  border: 1px solid #555;
+  background-color: #333;
+  color: #fff;
+}
+
+.control-group input[type="color"] {
+  padding: 0;
+  height: 30px;
+  width: 50px;
+}
+
+.control-group input[type="checkbox"] {
+  margin-right: 5px;
+}
+
+/* Action Buttons */
+.action-button {
+  background-color: #ffcc00;
+  color: #000;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.action-button:hover {
+  background-color: #e6b800;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
 }
 
 /* Responsive Adjustments */
@@ -165,5 +266,52 @@
 
   #media-trailer {
     height: 250px;
+  }
+
+  .selectors {
+    flex-direction: column;
+  }
+
+  .subtitle-controls {
+    flex-direction: column;
+  }
+
+  .movie-stream-container select,
+  .season-episode-container select {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .media-header h1 {
+    font-size: 1.5em;
+  }
+
+  #media-description {
+    font-size: 14px;
+  }
+
+  .detail-status-button {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+
+  .season-episode-container h2,
+  .subtitle-controls-container h2 {
+    font-size: 1.2em;
+  }
+
+  .media-video {
+    height: auto;
+  }
+
+  .control-group input,
+  .control-group select {
+    font-size: 12px;
+  }
+
+  .action-button {
+    font-size: 12px;
+    padding: 8px 12px;
   }
 }

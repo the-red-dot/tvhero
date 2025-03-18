@@ -369,7 +369,7 @@ function MediaDetails() {
   useEffect(() => {
     if (currentStreamUrls && videoRef.current) {
       const resolutions = Object.keys(currentStreamUrls);
-      const defaultResolution = resolutions.includes('720p') ? '720p' : resolutions[0];
+      const defaultResolution = resolutions.includes('480p') ? '480p' : resolutions[0];
       setSelectedResolution(defaultResolution);
       if (defaultResolution) {
         videoRef.current.src = currentStreamUrls[defaultResolution];
