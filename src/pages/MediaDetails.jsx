@@ -52,11 +52,11 @@ function MediaDetails() {
 
   async function fetchVideoStreams(title, season = null, episode = null) {
     try {
-      let url = `https://1ed5-2a10-8012-f-9d50-a0da-8c70-edfb-3eb5.ngrok-free.app/fetch_stream?title=${encodeURIComponent(title)}`;
+      let url = `/api/rezka/fetch_stream?title=${encodeURIComponent(title)}`;
       if (season !== null && episode !== null) {
         url += `&season=${season}&episode=${episode}`;
       }
-      const response = await fetch(url, { headers: { 'ngrok-skip-browser-warning': 'true' } });
+      const response = await fetch(url);
       const data = await response.json();
       if (data.error) {
         console.error('Error fetching stream:', data.error);

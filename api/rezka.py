@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from hdrezka import Search
 from HdRezkaApi import HdRezkaApi
 import logging
+from mangum import Mangum
 
 app = FastAPI()
 
@@ -14,9 +15,9 @@ logger = logging.getLogger(__name__)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5500",  # Keep for local development
-        "https://tvhero.vercel.app",  # Your production frontend
-        "https://tvhero-git-main-geras-projects-5ef45cdd.vercel.app",  # Your Vercel preview deployment
+        "http://localhost:5500",
+        "https://tvhero.vercel.app",
+        "https://tvhero-git-main-geras-projects-5ef45cdd.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -24,7 +25,7 @@ app.add_middleware(
 )
 
 
-@app.get("/api/fetch_stream")
+@app.get("/fetch_stream")
 async def fetch_stream(
     request: Request,
     title: str = Query(None),  # Make title optional
@@ -102,9 +103,7 @@ async def fetch_stream(
                             if isinstance(stream_url, list)
                             else stream_url
                         )
-                        hls_url = (
-                            mp4_url + ":hls:manifest.m3u8"
-                        )  # Adjust this if needed
+                        hls_url = mp4_url + ":hls:manifest.m3u8"  # Adjust if needed
                         stream_urls[resolution] = hls_url
                         logger.info(f"HLS Stream URL for {resolution}: {hls_url}")
                 except Exception as e:
@@ -132,3 +131,7 @@ async def fetch_stream(
         logger.error(f"Unhandled exception: {e}")
         logger.exception("Exception details:")
         raise HTTPException(status_code=500, detail="שגיאה פנימית בשרת.")
+
+
+# Mangum handler for Vercel serverless
+handler = Mangum(app)
