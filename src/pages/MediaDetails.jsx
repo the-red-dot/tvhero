@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom'; // Use useParams instead of useSearchParams
+import { useSearchParams } from 'react-router-dom';
 import { fetchTrailerUrl } from '../utils/trailerManager';
 import { db, doc, getDoc, updateDoc, deleteField } from '../utils/firebase';
 import { currentUser } from '../utils/auth';
@@ -7,9 +7,10 @@ import JSZip from 'jszip';
 import '../styles/media.css';
 
 function MediaDetails() {
-  // Extract TMDB ID and media type from URL path parameters
-  const { tmdbId, type } = useParams(); // Extract tmdbId and type from path
-  const [mediaType, setMediaType] = useState(type || 'movie'); // Default to 'movie' if type is not provided
+  // Extract TMDB ID and media type from URL parameters
+  const [searchParams] = useSearchParams();
+  const tmdbId = searchParams.get('tmdbId');
+  const [mediaType, setMediaType] = useState(searchParams.get('type') || 'movie');
 
   // State variables for media details and UI controls
   const [mediaData, setMediaData] = useState(null);
@@ -30,7 +31,7 @@ function MediaDetails() {
   const [timingOffset, setTimingOffset] = useState(0);
   const [fontFamily, setFontFamily] = useState('Arial');
   const [shouldFlipPunctuation, setShouldFlipPunctuation] = useState(true);
-  const [selectedResolution, setSelectedResolution] = useState('');
+  const [selectedResolution, setSelectedResolution] = useState(''); // New state for selected resolution
 
   // Refs for video element and caching
   const videoRef = useRef(null);
@@ -350,9 +351,8 @@ function MediaDetails() {
       setError('לא סופק מזהה מדיה.');
       return;
     }
-    setMediaType(type || 'movie'); // Ensure mediaType is updated if type changes
-    getMediaDetails(tmdbId, type || 'movie');
-  }, [tmdbId, type]);
+    getMediaDetails(tmdbId, mediaType);
+  }, [tmdbId, mediaType]);
 
   useEffect(() => {
     if (mediaData && currentUser) fetchStatus(tmdbId);
