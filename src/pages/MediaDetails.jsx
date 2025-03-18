@@ -30,7 +30,8 @@ function MediaDetails() {
   const [subtitlePosition, setSubtitlePosition] = useState(10);
   const [timingOffset, setTimingOffset] = useState(0);
   const [fontFamily, setFontFamily] = useState('Arial');
-  const [shouldFlipPunctuation, setShouldFlipPunctuation] = useState(true); // Renamed state variable
+  const [shouldFlipPunctuation, setShouldFlipPunctuation] = useState(true);
+  const [selectedResolution, setSelectedResolution] = useState(''); // New state for selected resolution
 
   // Refs for video element and caching
   const videoRef = useRef(null);
@@ -42,24 +43,18 @@ function MediaDetails() {
 
   // **Utility Functions**
 
-  // Display error messages (using alert for simplicity)
   function showErrorPopup(message) {
     alert(message);
   }
 
-  // Fetch video streams from Rezka API via ngrok
   async function fetchVideoStreams(title, season = null, episode = null) {
     try {
       let url = `https://1ed5-2a10-8012-f-9d50-a0da-8c70-edfb-3eb5.ngrok-free.app/fetch_stream?title=${encodeURIComponent(title)}`;
       if (season !== null && episode !== null) {
         url += `&season=${season}&episode=${episode}`;
       }
-
-      const response = await fetch(url, {
-        headers: { 'ngrok-skip-browser-warning': 'true' },
-      });
+      const response = await fetch(url, { headers: { 'ngrok-skip-browser-warning': 'true' } });
       const data = await response.json();
-
       if (data.error) {
         console.error('Error fetching stream:', data.error);
         showErrorPopup(data.error);
@@ -69,7 +64,6 @@ function MediaDetails() {
         console.warn('Warning:', data.warning);
         showErrorPopup(data.warning);
       }
-
       console.log('Fetched Stream URLs:', data.stream_urls);
       return data.stream_urls || null;
     } catch (error) {
@@ -79,7 +73,6 @@ function MediaDetails() {
     }
   }
 
-  // Toggle media status in Firestore
   async function toggleMediaStatus(_tmdbId) {
     if (!currentUser) {
       showErrorPopup('יש להתחבר כדי לעדכן את סטטוס הפריט.');
@@ -90,10 +83,8 @@ function MediaDetails() {
       const docSnap = await getDoc(userDocRef);
       let currentStatus = null;
       if (docSnap.exists()) {
-        const data = docSnap.data();
-        currentStatus = data.statuses?.[_tmdbId] || null;
+        currentStatus = docSnap.data().statuses?.[_tmdbId] || null;
       }
-
       if (currentStatus === 'watched') {
         await updateDoc(userDocRef, { [`statuses.${_tmdbId}`]: 'to-watch' });
       } else if (currentStatus === 'to-watch') {
@@ -108,15 +99,13 @@ function MediaDetails() {
     }
   }
 
-  // Fetch current media status from Firestore
   async function fetchStatus(_tmdbId) {
     if (!currentUser) return;
     try {
       const userDocRef = doc(db, 'users', currentUser.uid);
       const docSnap = await getDoc(userDocRef);
       if (docSnap.exists()) {
-        const data = docSnap.data();
-        setStatus(data.statuses?.[_tmdbId] || null);
+        setStatus(docSnap.data().statuses?.[_tmdbId] || null);
       }
     } catch (error) {
       console.error('Error fetching status:', error);
@@ -124,17 +113,14 @@ function MediaDetails() {
     }
   }
 
-  // Fetch and combine media details from TMDB
   async function getMediaDetails(_tmdbId, mType) {
     try {
       const heResp = await fetch(`/api/tmdb?url=/${mType}/${_tmdbId}&type=${mType}&id=${_tmdbId}&language=he`);
       const heData = await heResp.json();
       if (!heData) throw new Error('No Hebrew data.');
-
       const enResp = await fetch(`/api/tmdb?url=/${mType}/${_tmdbId}&type=${mType}&id=${_tmdbId}&language=en-US`);
       const enData = await enResp.json();
       if (!enData) throw new Error('No English data.');
-
       const extResp = await fetch(`/api/tmdb?url=/${mType}/${_tmdbId}/external_ids&type=${mType}&id=${_tmdbId}&language=en-US`);
       const extData = await extResp.json();
       const imdb = extData?.imdb_id || 'N/A';
@@ -175,7 +161,6 @@ function MediaDetails() {
         type: mType,
       };
       setMediaData(combinedData);
-
       setTrailerUrl(await fetchTrailerUrl(_tmdbId, combinedData.hebrewTitle, releaseYear, mType));
 
       if (mType === 'tv') {
@@ -194,7 +179,6 @@ function MediaDetails() {
     }
   }
 
-  // Fetch episodes for a selected season
   async function fetchAndPopulateEpisodes(_tmdbId, seasonNumber) {
     const cacheKey = `${_tmdbId}-season-${seasonNumber}`;
     let seasonData = episodesCache.current.get(cacheKey);
@@ -206,7 +190,6 @@ function MediaDetails() {
     setEpisodes(seasonData?.episodes || []);
   }
 
-  // Display episode details and stream URLs
   async function displayEpisodeDetails(seasonNumber, episodeNumber) {
     const cacheKey = `${tmdbId}-season-${seasonNumber}`;
     const seasonData = episodesCache.current.get(cacheKey);
@@ -229,7 +212,6 @@ function MediaDetails() {
   }
 
   // **Subtitle Utility Functions**
-
   function timeStringToSeconds(timeStr) {
     const [hours, minutes, rest] = timeStr.split(':');
     const [seconds, milliseconds] = rest.split('.');
@@ -278,11 +260,9 @@ function MediaDetails() {
     return 'WEBVTT\n\n' + srt.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
   }
 
-  // Apply subtitle settings to the video
   function applySubtitleSettings() {
     if (!videoRef.current || !subtitleContentRef.current) return;
-
-    const adjustedContent = parseAndAdjustSubtitle(subtitleContentRef.current || 'WEBVTT\n\n', timingOffset, shouldFlipPunctuation); // Updated to use shouldFlipPunctuation
+    const adjustedContent = parseAndAdjustSubtitle(subtitleContentRef.current || 'WEBVTT\n\n', timingOffset, shouldFlipPunctuation);
     const blob = new Blob([adjustedContent], { type: 'text/vtt' });
     const url = URL.createObjectURL(blob);
 
@@ -325,21 +305,18 @@ function MediaDetails() {
     `;
   }
 
-  // Fetch available subtitles from wizdom.xyz
   async function fetchAndDisplayAvailableSubtitles(imdbId, season = null, episode = null) {
     try {
       const resp = await fetch(`https://wizdom.xyz/api/releases/${imdbId}`);
       if (!resp.ok) throw new Error('Subtitles not found.');
       const data = await resp.json();
       const allSubs = data.subs;
-
       let subtitlesList = [];
       if (Array.isArray(allSubs)) {
         subtitlesList = allSubs;
       } else if (season && episode && allSubs[season]?.[episode]) {
         subtitlesList = allSubs[season][episode];
       }
-
       setAvailableSubtitles(subtitlesList.map(sub => ({
         id: sub.id,
         label: `${sub.version} (${sub.date ? new Date(sub.date).getFullYear() : 'N/A'}) [${sub.release_group || '-'}]`,
@@ -350,7 +327,6 @@ function MediaDetails() {
     }
   }
 
-  // Download and load selected subtitle
   async function downloadAndLoadSelectedSubtitle(subId) {
     try {
       const resp = await fetch(`https://wizdom.xyz/api/files/sub/${subId}`);
@@ -360,7 +336,6 @@ function MediaDetails() {
       const zipData = await zip.loadAsync(blob);
       const fileName = Object.keys(zipData.files)[0];
       const content = await zipData.files[fileName].async('string');
-
       subtitleContentRef.current = content.startsWith('WEBVTT') ? content : convertSRTtoVTT(content);
       applySubtitleSettings();
     } catch (error) {
@@ -371,7 +346,6 @@ function MediaDetails() {
 
   // **Effects**
 
-  // Fetch media details on component mount or when tmdbId/mediaType changes
   useEffect(() => {
     if (!tmdbId) {
       setError('לא סופק מזהה מדיה.');
@@ -380,25 +354,23 @@ function MediaDetails() {
     getMediaDetails(tmdbId, mediaType);
   }, [tmdbId, mediaType]);
 
-  // Fetch status when mediaData or user changes
   useEffect(() => {
     if (mediaData && currentUser) fetchStatus(tmdbId);
   }, [mediaData, currentUser, tmdbId]);
 
-  // Fetch episodes when season is selected
   useEffect(() => {
     if (mediaType === 'tv' && selectedSeason) fetchAndPopulateEpisodes(tmdbId, selectedSeason);
   }, [selectedSeason, mediaType, tmdbId]);
 
-  // Display episode details when episode is selected
   useEffect(() => {
     if (mediaType === 'tv' && selectedEpisode) displayEpisodeDetails(selectedSeason, selectedEpisode);
   }, [selectedEpisode, mediaType, tmdbId, selectedSeason]);
 
-  // Handle video playback and subtitles when stream URLs are available
   useEffect(() => {
     if (currentStreamUrls && videoRef.current) {
-      const defaultResolution = currentStreamUrls['720p'] || Object.keys(currentStreamUrls)[0];
+      const resolutions = Object.keys(currentStreamUrls);
+      const defaultResolution = resolutions.includes('720p') ? '720p' : resolutions[0];
+      setSelectedResolution(defaultResolution);
       if (defaultResolution) {
         videoRef.current.src = currentStreamUrls[defaultResolution];
         videoRef.current.load();
@@ -470,8 +442,10 @@ function MediaDetails() {
             <label htmlFor="resolution-select">בחר רזולוציה:</label>
             <select
               id="resolution-select"
+              value={selectedResolution}
               onChange={e => {
                 const res = e.target.value;
+                setSelectedResolution(res);
                 if (res && currentStreamUrls[res]) {
                   videoRef.current.src = currentStreamUrls[res];
                   videoRef.current.load();
@@ -523,8 +497,10 @@ function MediaDetails() {
                 <label htmlFor="resolution-select">בחר רזולוציה:</label>
                 <select
                   id="resolution-select"
+                  value={selectedResolution}
                   onChange={e => {
                     const res = e.target.value;
+                    setSelectedResolution(res);
                     if (res && currentStreamUrls[res]) {
                       videoRef.current.src = currentStreamUrls[res];
                       videoRef.current.load();
@@ -628,8 +604,8 @@ function MediaDetails() {
               <input
                 type="checkbox"
                 id="flip-punctuation"
-                checked={shouldFlipPunctuation} // Updated to use shouldFlipPunctuation
-                onChange={e => setShouldFlipPunctuation(e.target.checked)} // Updated to use setShouldFlipPunctuation
+                checked={shouldFlipPunctuation}
+                onChange={e => setShouldFlipPunctuation(e.target.checked)}
               />
               <label htmlFor="flip-punctuation">הפוך סימני פיסוק</label>
             </div>
@@ -666,7 +642,7 @@ function MediaDetails() {
                   setSubtitlePosition(10);
                   setTimingOffset(0);
                   setFontFamily('Arial');
-                  setShouldFlipPunctuation(true); // Updated to use setShouldFlipPunctuation
+                  setShouldFlipPunctuation(true);
                   applySubtitleSettings();
                 }}
               >

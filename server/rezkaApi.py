@@ -15,7 +15,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5500",
-        "https://tvhero-git-main-geras-projects-5ef45cdd.vercel.app/",
+        "https://tvhero.vercel.app",
+        "https://tvhero-git-main-geras-projects-5ef45cdd.vercel.app",
         "https://1ed5-2a10-8012-f-9d50-a0da-8c70-edfb-3eb5.ngrok-free.app",
     ],
     allow_credentials=True,
