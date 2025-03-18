@@ -52,7 +52,7 @@ function MediaDetails() {
 
   async function fetchVideoStreams(title, season = null, episode = null) {
     try {
-      let url = `/api/rezka/fetch_stream?title=${encodeURIComponent(title)}`;
+      let url = `https://tvhero.vercel.app/api/rezka/fetch_stream?title=${encodeURIComponent(title)}`;
       if (season !== null && episode !== null) {
         url += `&season=${season}&episode=${episode}`;
       }
