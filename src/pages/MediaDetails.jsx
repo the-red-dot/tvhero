@@ -30,7 +30,7 @@ function MediaDetails() {
   const [subtitlePosition, setSubtitlePosition] = useState(10);
   const [timingOffset, setTimingOffset] = useState(0);
   const [fontFamily, setFontFamily] = useState('Arial');
-  const [flipPunctuation, setFlipPunctuation] = useState(true);
+  const [shouldFlipPunctuation, setShouldFlipPunctuation] = useState(true); // Renamed state variable
 
   // Refs for video element and caching
   const videoRef = useRef(null);
@@ -282,7 +282,7 @@ function MediaDetails() {
   function applySubtitleSettings() {
     if (!videoRef.current || !subtitleContentRef.current) return;
 
-    const adjustedContent = parseAndAdjustSubtitle(subtitleContentRef.current || 'WEBVTT\n\n', timingOffset, flipPunctuation);
+    const adjustedContent = parseAndAdjustSubtitle(subtitleContentRef.current || 'WEBVTT\n\n', timingOffset, shouldFlipPunctuation); // Updated to use shouldFlipPunctuation
     const blob = new Blob([adjustedContent], { type: 'text/vtt' });
     const url = URL.createObjectURL(blob);
 
@@ -628,8 +628,8 @@ function MediaDetails() {
               <input
                 type="checkbox"
                 id="flip-punctuation"
-                checked={flipPunctuation}
-                onChange={e => setFlipPunctuation(e.target.checked)}
+                checked={shouldFlipPunctuation} // Updated to use shouldFlipPunctuation
+                onChange={e => setShouldFlipPunctuation(e.target.checked)} // Updated to use setShouldFlipPunctuation
               />
               <label htmlFor="flip-punctuation">הפוך סימני פיסוק</label>
             </div>
@@ -666,7 +666,7 @@ function MediaDetails() {
                   setSubtitlePosition(10);
                   setTimingOffset(0);
                   setFontFamily('Arial');
-                  setFlipPunctuation(true);
+                  setShouldFlipPunctuation(true); // Updated to use setShouldFlipPunctuation
                   applySubtitleSettings();
                 }}
               >
