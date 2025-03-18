@@ -34,6 +34,7 @@ function MediaDetails() {
   const [shouldFlipPunctuation, setShouldFlipPunctuation] = useState(true);
   const [selectedResolution, setSelectedResolution] = useState('');
   const [imdbIdGlobal, setImdbIdGlobal] = useState(null);
+  const [segmentCount, setSegmentCount] = useState(0); // New state for HLS segment count
 
   // Refs for video element, hls instance, and caching
   const videoRef = useRef(null);
@@ -135,7 +136,7 @@ function MediaDetails() {
             : 'N/A'
           : heData.first_air_date
           ? new Date(heData.first_air_date).getFullYear()
-          : 'N/A';
+            : 'N/A';
 
       let cast = 'אין מידע';
       if (!creditsCache.current.has(_tmdbId)) {
@@ -381,14 +382,21 @@ function MediaDetails() {
         hlsRef.current = null;
       }
 
-      if (videoSrc.endsWith('.m3u8') && Hls.isSupported()) {
-        // Handle HLS streams with hls.js
+      if (Hls.isSupported()) {
+        // Always use hls.js for HLS streams
         hlsRef.current = new Hls({
           maxBufferLength: 60, // Buffer up to 60 seconds ahead
         });
         hlsRef.current.loadSource(videoSrc);
         hlsRef.current.attachMedia(videoRef.current);
+
         hlsRef.current.on(Hls.Events.MANIFEST_PARSED, () => {
+          // Get the number of segments from the playlist
+          const playlist = hlsRef.current.levels[hlsRef.current.currentLevel].details;
+          const totalSegments = playlist.fragments.length;
+          setSegmentCount(totalSegments);
+          console.log(`Total HLS Segments: ${totalSegments}`);
+
           videoRef.current.currentTime = currentTime;
           videoRef.current.play().catch(err => {
             console.error('Error playing video:', err);
@@ -396,7 +404,7 @@ function MediaDetails() {
           });
         });
       } else {
-        // Handle direct video sources (e.g., MP4)
+        // Fallback for browsers that don't support hls.js
         videoRef.current.src = videoSrc;
         videoRef.current.load();
         videoRef.current.addEventListener('loadedmetadata', () => {
@@ -406,6 +414,7 @@ function MediaDetails() {
             showErrorPopup('שגיאה בניגון הווידאו.');
           });
         }, { once: true });
+        setSegmentCount(0); // No segment info available in fallback
       }
 
       // Fetch subtitles if available
@@ -497,6 +506,7 @@ function MediaDetails() {
                 <option key={res} value={res}>{res}</option>
               ))}
             </select>
+            <p>מספר סגמנטים ב-HLS: {segmentCount > 0 ? segmentCount : 'לא זמין'}</p>
             <video ref={videoRef} controls className="media-video" />
           </div>
         </div>
@@ -544,6 +554,7 @@ function MediaDetails() {
                     <option key={res} value={res}>{res}</option>
                   ))}
                 </select>
+                <p>מספר סגמנטים ב-HLS: {segmentCount > 0 ? segmentCount : 'לא זמין'}</p>
                 <video ref={videoRef} controls className="media-video" />
               </div>
             </div>

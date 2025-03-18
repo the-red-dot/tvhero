@@ -97,14 +97,17 @@ async def fetch_stream(
                 try:
                     stream_url = stream(resolution)
                     if stream_url:
-                        stream_urls[resolution] = (
+                        # Convert MP4 URL to HLS manifest URL
+                        mp4_url = (
                             stream_url[0]
                             if isinstance(stream_url, list)
                             else stream_url
                         )
-                        logger.info(
-                            f"Stream URL for {resolution}: {stream_urls[resolution]}"
-                        )
+                        hls_url = (
+                            mp4_url + ":hls:manifest.m3u8"
+                        )  # Adjust this if needed
+                        stream_urls[resolution] = hls_url
+                        logger.info(f"HLS Stream URL for {resolution}: {hls_url}")
                 except Exception as e:
                     logger.error(f"Error fetching stream URL for {resolution}: {e}")
                     stream_urls[resolution] = None
