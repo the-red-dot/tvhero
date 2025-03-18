@@ -24,7 +24,7 @@ app.add_middleware(
 )
 
 
-@app.get("/fetch_stream")
+@app.get("/api/fetch_stream")
 async def fetch_stream(
     request: Request,
     title: str = Query(None),  # Make title optional
