@@ -1,9 +1,8 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
 from hdrezka import Search
 from HdRezkaApi import HdRezkaApi
 import logging
-from fastapi.requests import Request
 
 app = FastAPI()
 
@@ -27,8 +26,15 @@ app.add_middleware(
 
 @app.get("/fetch_stream")
 async def fetch_stream(
-    request: Request, title: str, season: int = None, episode: int = None
+    request: Request,
+    title: str = Query(None),  # Make title optional
+    season: int = Query(None),
+    episode: int = Query(None),
 ):
+    # Manually enforce title requirement for GET requests
+    if request.method == "GET" and not title:
+        raise HTTPException(status_code=400, detail="Title is required")
+
     try:
         logger.info(f"Request headers: {request.headers}")
         logger.info(
@@ -67,7 +73,6 @@ async def fetch_stream(
                 return {"error": "אין דיבובים זמינים לתוכן זה."}
 
         logger.info(f"Selected translator: {selected_translator}")
-
         translator_id = rezka.translators.get(selected_translator)
         logger.info(f"Translator ID for '{selected_translator}': {translator_id}")
 
