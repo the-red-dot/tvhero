@@ -52,12 +52,14 @@ function MediaDetails() {
 
   async function fetchVideoStreams(title, season = null, episode = null) {
     try {
-      let url = `https://tvhero.vercel.app/api/rezka/fetch_stream?title=${encodeURIComponent(title)}`;
+      let url = `/api/rezka/fetch_stream?title=${encodeURIComponent(title)}`;
       if (season !== null && episode !== null) {
         url += `&season=${season}&episode=${episode}`;
       }
       const response = await fetch(url);
-      const data = await response.json();
+      const text = await response.text(); // Get raw response
+      console.log('Raw API response:', text);
+      const data = JSON.parse(text); // Parse as JSON
       if (data.error) {
         console.error('Error fetching stream:', data.error);
         showErrorPopup(data.error);
@@ -75,7 +77,7 @@ function MediaDetails() {
       return null;
     }
   }
-
+  
   async function toggleMediaStatus(_tmdbId) {
     if (!currentUser) {
       showErrorPopup('יש להתחבר כדי לעדכן את סטטוס הפריט.');
