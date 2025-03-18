@@ -1,0 +1,4 @@
+hdrezka==3.2.3
+HdRezkaApi==7.1.0
+fastapi==0.109.0
+uvicorn==0.27.0
