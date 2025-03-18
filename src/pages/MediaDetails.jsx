@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import Hls from 'hls.js'; // Import hls.js for HLS stream handling
 import { fetchTrailerUrl } from '../utils/trailerManager';
 import { db, doc, getDoc, updateDoc, deleteField } from '../utils/firebase';
 import { currentUser } from '../utils/auth';
@@ -31,15 +32,16 @@ function MediaDetails() {
   const [timingOffset, setTimingOffset] = useState(0);
   const [fontFamily, setFontFamily] = useState('Arial');
   const [shouldFlipPunctuation, setShouldFlipPunctuation] = useState(true);
-  const [selectedResolution, setSelectedResolution] = useState(''); // New state for selected resolution
+  const [selectedResolution, setSelectedResolution] = useState('');
+  const [imdbIdGlobal, setImdbIdGlobal] = useState(null);
 
-  // Refs for video element and caching
+  // Refs for video element, hls instance, and caching
   const videoRef = useRef(null);
+  const hlsRef = useRef(null); // Ref to manage hls.js instance
   const seasonsCache = useRef(new Map());
   const episodesCache = useRef(new Map());
   const creditsCache = useRef(new Map());
   const subtitleContentRef = useRef('');
-  const [imdbIdGlobal, setImdbIdGlobal] = useState(null);
 
   // **Utility Functions**
 
@@ -212,6 +214,7 @@ function MediaDetails() {
   }
 
   // **Subtitle Utility Functions**
+
   function timeStringToSeconds(timeStr) {
     const [hours, minutes, rest] = timeStr.split(':');
     const [seconds, milliseconds] = rest.split('.');
@@ -366,19 +369,46 @@ function MediaDetails() {
     if (mediaType === 'tv' && selectedEpisode) displayEpisodeDetails(selectedSeason, selectedEpisode);
   }, [selectedEpisode, mediaType, tmdbId, selectedSeason]);
 
+  // Handle video source setup and buffering with hls.js
   useEffect(() => {
-    if (currentStreamUrls && videoRef.current) {
-      const resolutions = Object.keys(currentStreamUrls);
-      const defaultResolution = resolutions.includes('480p') ? '480p' : resolutions[0];
-      setSelectedResolution(defaultResolution);
-      if (defaultResolution) {
-        videoRef.current.src = currentStreamUrls[defaultResolution];
-        videoRef.current.load();
-        videoRef.current.play().catch(err => {
-          console.error('Error playing video:', err);
-          showErrorPopup('שגיאה בניגון הווידאו.');
-        });
+    if (currentStreamUrls && selectedResolution && videoRef.current) {
+      const videoSrc = currentStreamUrls[selectedResolution];
+      const currentTime = videoRef.current.currentTime || 0; // Preserve playback position
+
+      // Clean up existing hls instance
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
       }
+
+      if (videoSrc.endsWith('.m3u8') && Hls.isSupported()) {
+        // Handle HLS streams with hls.js
+        hlsRef.current = new Hls({
+          maxBufferLength: 60, // Buffer up to 60 seconds ahead
+        });
+        hlsRef.current.loadSource(videoSrc);
+        hlsRef.current.attachMedia(videoRef.current);
+        hlsRef.current.on(Hls.Events.MANIFEST_PARSED, () => {
+          videoRef.current.currentTime = currentTime;
+          videoRef.current.play().catch(err => {
+            console.error('Error playing video:', err);
+            showErrorPopup('שגיאה בניגון הווידאו.');
+          });
+        });
+      } else {
+        // Handle direct video sources (e.g., MP4)
+        videoRef.current.src = videoSrc;
+        videoRef.current.load();
+        videoRef.current.addEventListener('loadedmetadata', () => {
+          videoRef.current.currentTime = currentTime;
+          videoRef.current.play().catch(err => {
+            console.error('Error playing video:', err);
+            showErrorPopup('שגיאה בניגון הווידאו.');
+          });
+        }, { once: true });
+      }
+
+      // Fetch subtitles if available
       if (imdbIdGlobal) {
         fetchAndDisplayAvailableSubtitles(imdbIdGlobal, mediaType === 'tv' ? selectedSeason : null, mediaType === 'tv' ? selectedEpisode : null);
       }
@@ -386,7 +416,24 @@ function MediaDetails() {
       subtitleContentRef.current = emptyVTT;
       applySubtitleSettings();
     }
-  }, [currentStreamUrls, imdbIdGlobal, mediaType, selectedSeason, selectedEpisode]);
+
+    // Cleanup hls instance on unmount or source change
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+  }, [currentStreamUrls, selectedResolution, imdbIdGlobal, mediaType, selectedSeason, selectedEpisode]);
+
+  // Set default resolution when stream URLs are fetched
+  useEffect(() => {
+    if (currentStreamUrls) {
+      const resolutions = Object.keys(currentStreamUrls);
+      const defaultResolution = resolutions.includes('480p') ? '480p' : resolutions[0];
+      setSelectedResolution(defaultResolution);
+    }
+  }, [currentStreamUrls]);
 
   // **Render Logic**
 
@@ -443,15 +490,7 @@ function MediaDetails() {
             <select
               id="resolution-select"
               value={selectedResolution}
-              onChange={e => {
-                const res = e.target.value;
-                setSelectedResolution(res);
-                if (res && currentStreamUrls[res]) {
-                  videoRef.current.src = currentStreamUrls[res];
-                  videoRef.current.load();
-                  videoRef.current.play().catch(err => showErrorPopup('שגיאה בניגון הווידאו.'));
-                }
-              }}
+              onChange={e => setSelectedResolution(e.target.value)}
             >
               <option value="">בחר רזולוציה</option>
               {Object.keys(currentStreamUrls).map(res => (
@@ -498,15 +537,7 @@ function MediaDetails() {
                 <select
                   id="resolution-select"
                   value={selectedResolution}
-                  onChange={e => {
-                    const res = e.target.value;
-                    setSelectedResolution(res);
-                    if (res && currentStreamUrls[res]) {
-                      videoRef.current.src = currentStreamUrls[res];
-                      videoRef.current.load();
-                      videoRef.current.play().catch(err => showErrorPopup('שגיאה בניגון הווידאו.'));
-                    }
-                  }}
+                  onChange={e => setSelectedResolution(e.target.value)}
                 >
                   <option value="">בחר רזולוציה</option>
                   {Object.keys(currentStreamUrls).map(res => (
