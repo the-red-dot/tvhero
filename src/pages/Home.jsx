@@ -5,7 +5,6 @@ import SmartSearchBar from '../components/SmartSearchBar';
 import StandardSearchBar from '../components/StandardSearchBar';
 import MediaGrid from '../components/MediaGrid';
 import AddPopup from '../components/AddPopup';
-import { cloneMediaArray } from '../utils/helpers';
 import { db, doc, setDoc } from '../utils/firebase';
 
 function Home() {

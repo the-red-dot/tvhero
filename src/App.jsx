@@ -65,7 +65,7 @@ function App() {
     <Layout>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/media" element={<MediaDetails />} />
+        <Route path="/media/:tmdbId/:type" element={<MediaDetails />} />
         {/* Add more routes for new pages here */}
       </Routes>
     </Layout>
