@@ -17,7 +17,7 @@ app.add_middleware(
         "http://localhost:5500",
         "https://tvhero.vercel.app",
         "https://tvhero-git-main-geras-projects-5ef45cdd.vercel.app",
-        "https://7df9-2a10-8012-1-e449-1c0e-f70a-cff8-2d58.ngrok-free.app",
+        "https://1ed5-2a10-8012-f-9d50-a0da-8c70-edfb-3eb5.ngrok-free.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -97,17 +97,14 @@ async def fetch_stream(
                 try:
                     stream_url = stream(resolution)
                     if stream_url:
-                        # Convert MP4 URL to HLS manifest URL
-                        mp4_url = (
+                        stream_urls[resolution] = (
                             stream_url[0]
                             if isinstance(stream_url, list)
                             else stream_url
                         )
-                        hls_url = (
-                            mp4_url + ":hls:manifest.m3u8"
-                        )  # Adjust this if needed
-                        stream_urls[resolution] = hls_url
-                        logger.info(f"HLS Stream URL for {resolution}: {hls_url}")
+                        logger.info(
+                            f"Stream URL for {resolution}: {stream_urls[resolution]}"
+                        )
                 except Exception as e:
                     logger.error(f"Error fetching stream URL for {resolution}: {e}")
                     stream_urls[resolution] = None
