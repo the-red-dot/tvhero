@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useContext } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { LibraryContext } from '../utils/LibraryContext'; // Import LibraryContext
 import Hls from 'hls.js'; // Import hls.js for HLS stream handling
 import { fetchTrailerUrl } from '../utils/trailerManager';
 import { db, doc, getDoc, updateDoc, deleteField } from '../utils/firebase';
-import { currentUser } from '../utils/auth';
 import JSZip from 'jszip';
 import '../styles/media.css';
 
 function MediaDetails() {
-  // Extract TMDB ID and media type from URL parameters
+  // Extract user from LibraryContext
+  const { user } = useContext(LibraryContext);
+  const navigate = useNavigate(); // Hook for programmatic navigation
   const [searchParams] = useSearchParams();
   const tmdbId = searchParams.get('tmdbId');
   const [mediaType, setMediaType] = useState(searchParams.get('type') || 'movie');
@@ -44,6 +46,13 @@ function MediaDetails() {
   const creditsCache = useRef(new Map());
   const subtitleContentRef = useRef('');
 
+  // **Authentication Check**
+  useEffect(() => {
+    if (!user) {
+      navigate('/'); // Redirect to home page if not authenticated
+    }
+  }, [user, navigate]);
+
   // **Utility Functions**
 
   function showErrorPopup(message) {
@@ -77,12 +86,12 @@ function MediaDetails() {
   }
 
   async function toggleMediaStatus(_tmdbId) {
-    if (!currentUser) {
+    if (!user) {
       showErrorPopup('יש להתחבר כדי לעדכן את סטטוס הפריט.');
       return;
     }
     try {
-      const userDocRef = doc(db, 'users', currentUser.uid);
+      const userDocRef = doc(db, 'users', user.uid);
       const docSnap = await getDoc(userDocRef);
       let currentStatus = null;
       if (docSnap.exists()) {
@@ -103,9 +112,9 @@ function MediaDetails() {
   }
 
   async function fetchStatus(_tmdbId) {
-    if (!currentUser) return;
+    if (!user) return;
     try {
-      const userDocRef = doc(db, 'users', currentUser.uid);
+      const userDocRef = doc(db, 'users', user.uid);
       const docSnap = await getDoc(userDocRef);
       if (docSnap.exists()) {
         setStatus(docSnap.data().statuses?.[_tmdbId] || null);
@@ -355,12 +364,14 @@ function MediaDetails() {
       setError('לא סופק מזהה מדיה.');
       return;
     }
-    getMediaDetails(tmdbId, mediaType);
-  }, [tmdbId, mediaType]);
+    if (user) { // Only fetch details if user is authenticated
+      getMediaDetails(tmdbId, mediaType);
+    }
+  }, [tmdbId, mediaType, user]);
 
   useEffect(() => {
-    if (mediaData && currentUser) fetchStatus(tmdbId);
-  }, [mediaData, currentUser, tmdbId]);
+    if (mediaData && user) fetchStatus(tmdbId);
+  }, [mediaData, user, tmdbId]);
 
   useEffect(() => {
     if (mediaType === 'tv' && selectedSeason) fetchAndPopulateEpisodes(tmdbId, selectedSeason);
