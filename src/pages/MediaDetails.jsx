@@ -1,19 +1,21 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { LibraryContext } from '../utils/LibraryContext';
-import Hls from 'hls.js';
+import { LibraryContext } from '../utils/LibraryContext'; // Import LibraryContext
+import Hls from 'hls.js'; // Import hls.js for HLS stream handling
 import { fetchTrailerUrl } from '../utils/trailerManager';
 import { db, doc, getDoc, updateDoc, deleteField } from '../utils/firebase';
 import JSZip from 'jszip';
 import '../styles/media.css';
 
 function MediaDetails() {
+  // Extract user from LibraryContext
   const { user } = useContext(LibraryContext);
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // Hook for programmatic navigation
   const [searchParams] = useSearchParams();
   const tmdbId = searchParams.get('tmdbId');
   const [mediaType, setMediaType] = useState(searchParams.get('type') || 'movie');
 
+  // State variables for media details and UI controls
   const [mediaData, setMediaData] = useState(null);
   const [error, setError] = useState('');
   const [status, setStatus] = useState(null);
@@ -34,10 +36,11 @@ function MediaDetails() {
   const [shouldFlipPunctuation, setShouldFlipPunctuation] = useState(true);
   const [selectedResolution, setSelectedResolution] = useState('');
   const [imdbIdGlobal, setImdbIdGlobal] = useState(null);
-  const [segmentCount, setSegmentCount] = useState(0);
+  const [segmentCount, setSegmentCount] = useState(0); // New state for HLS segment count
 
+  // Refs for video element, hls instance, and caching
   const videoRef = useRef(null);
-  const hlsRef = useRef(null);
+  const hlsRef = useRef(null); // Ref to manage hls.js instance
   const seasonsCache = useRef(new Map());
   const episodesCache = useRef(new Map());
   const creditsCache = useRef(new Map());
@@ -46,28 +49,23 @@ function MediaDetails() {
   // **Authentication Check**
   useEffect(() => {
     if (!user) {
-      navigate('/');
+      navigate('/'); // Redirect to home page if not authenticated
     }
   }, [user, navigate]);
 
   // **Utility Functions**
+
   function showErrorPopup(message) {
     alert(message);
   }
 
-  // **fetchVideoStreams with 'Referer' header**
   async function fetchVideoStreams(title, season = null, episode = null) {
     try {
       let url = `https://7df9-2a10-8012-1-e449-1c0e-f70a-cff8-2d58.ngrok-free.app/fetch_stream?title=${encodeURIComponent(title)}`;
       if (season !== null && episode !== null) {
         url += `&season=${season}&episode=${episode}`;
       }
-      const response = await fetch(url, {
-        headers: {
-          'ngrok-skip-browser-warning': 'true',
-          'Referer': 'https://7df9-2a10-8012-1-e449-1c0e-f70a-cff8-2d58.ngrok-free.app'
-        }
-      });
+      const response = await fetch(url, { headers: { 'ngrok-skip-browser-warning': 'true' } });
       const data = await response.json();
       if (data.error) {
         console.error('Error fetching stream:', data.error);
@@ -226,6 +224,7 @@ function MediaDetails() {
   }
 
   // **Subtitle Utility Functions**
+
   function timeStringToSeconds(timeStr) {
     const [hours, minutes, rest] = timeStr.split(':');
     const [seconds, milliseconds] = rest.split('.');
@@ -359,12 +358,13 @@ function MediaDetails() {
   }
 
   // **Effects**
+
   useEffect(() => {
     if (!tmdbId) {
       setError('לא סופק מזהה מדיה.');
       return;
     }
-    if (user) {
+    if (user) { // Only fetch details if user is authenticated
       getMediaDetails(tmdbId, mediaType);
     }
   }, [tmdbId, mediaType, user]);
@@ -381,64 +381,41 @@ function MediaDetails() {
     if (mediaType === 'tv' && selectedEpisode) displayEpisodeDetails(selectedSeason, selectedEpisode);
   }, [selectedEpisode, mediaType, tmdbId, selectedSeason]);
 
-  // **Handle Video Source Setup with hls.js (Updated)**
+  // Handle video source setup and buffering with hls.js
   useEffect(() => {
     if (currentStreamUrls && selectedResolution && videoRef.current) {
       const videoSrc = currentStreamUrls[selectedResolution];
-      const currentTime = videoRef.current.currentTime || 0;
+      const currentTime = videoRef.current.currentTime || 0; // Preserve playback position
 
-      // Clean up any existing HLS instance
+      // Clean up existing hls instance
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;
       }
 
       if (Hls.isSupported()) {
-        // Initialize hls.js without xhrSetup
+        // Always use hls.js for HLS streams
         hlsRef.current = new Hls({
-          maxBufferLength: 480, // Buffer up to 8 minutes ahead
+          maxBufferLength: 480, // Buffer up to 60 seconds ahead
         });
         hlsRef.current.loadSource(videoSrc);
         hlsRef.current.attachMedia(videoRef.current);
 
-        // Handle manifest parsing
         hlsRef.current.on(Hls.Events.MANIFEST_PARSED, () => {
+          // Get the number of segments from the playlist
           const playlist = hlsRef.current.levels[hlsRef.current.currentLevel].details;
           const totalSegments = playlist.fragments.length;
           setSegmentCount(totalSegments);
           console.log(`Total HLS Segments: ${totalSegments}`);
+
           videoRef.current.currentTime = currentTime;
           videoRef.current.play().catch(err => {
             console.error('Error playing video:', err);
             showErrorPopup('שגיאה בניגון הווידאו.');
           });
         });
-
-        // Updated error handling
-        hlsRef.current.on(Hls.Events.ERROR, (event, data) => {
-          if (data.fatal) {
-            // Log fatal errors and show popups
-            console.error('Fatal HLS Error:', data);
-            switch (data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR:
-                showErrorPopup('שגיאת רשת: לא ניתן לטעון את הווידאו.');
-                break;
-              case Hls.ErrorTypes.MEDIA_ERROR:
-                showErrorPopup('שגיאת מדיה: בעיה בניגון הווידאו.');
-                break;
-              default:
-                showErrorPopup('שגיאה לא ידועה בניגון הווידאו.');
-            }
-          } else {
-            // Log non-fatal errors only once per session
-            if (!sessionStorage.getItem('hlsNonFatalErrorLogged')) {
-              console.warn('Non-fatal HLS error:', data);
-              sessionStorage.setItem('hlsNonFatalErrorLogged', 'true');
-            }
-          }
-        });
       } else {
-        // Fallback for browsers that don’t support HLS
+        // Fallback for browsers that don't support hls.js
         videoRef.current.src = videoSrc;
         videoRef.current.load();
         videoRef.current.addEventListener('loadedmetadata', () => {
@@ -448,7 +425,7 @@ function MediaDetails() {
             showErrorPopup('שגיאה בניגון הווידאו.');
           });
         }, { once: true });
-        setSegmentCount(0);
+        setSegmentCount(0); // No segment info available in fallback
       }
 
       // Fetch subtitles if available
@@ -460,16 +437,16 @@ function MediaDetails() {
       applySubtitleSettings();
     }
 
-    // Cleanup on unmount or source change
+    // Cleanup hls instance on unmount or source change
     return () => {
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;
       }
-      sessionStorage.removeItem('hlsNonFatalErrorLogged'); // Reset for new streams
     };
   }, [currentStreamUrls, selectedResolution, imdbIdGlobal, mediaType, selectedSeason, selectedEpisode]);
 
+  // Set default resolution when stream URLs are fetched
   useEffect(() => {
     if (currentStreamUrls) {
       const resolutions = Object.keys(currentStreamUrls);
@@ -479,6 +456,7 @@ function MediaDetails() {
   }, [currentStreamUrls]);
 
   // **Render Logic**
+
   const statusText = status === 'watched' ? 'נצפה' : status === 'to-watch' ? 'לצפייה' : 'לסימון';
 
   if (error) return <div style={{ color: 'red', padding: '20px' }}>{error}</div>;
@@ -539,6 +517,7 @@ function MediaDetails() {
                 <option key={res} value={res}>{res}</option>
               ))}
             </select>
+            {/* <p>מספר סגמנטים ב-HLS: {segmentCount > 0 ? segmentCount : 'לא זמין'}</p> */}
             <video ref={videoRef} controls className="media-video" />
           </div>
         </div>
@@ -586,6 +565,7 @@ function MediaDetails() {
                     <option key={res} value={res}>{res}</option>
                   ))}
                 </select>
+                {/* <p>מספר סגמנטים ב-HLS: {segmentCount > 0 ? segmentCount : 'לא זמין'}</p> */}
                 <video ref={videoRef} controls className="media-video" />
               </div>
             </div>
