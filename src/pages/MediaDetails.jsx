@@ -58,7 +58,7 @@ function MediaDetails() {
   // **fetchVideoStreams with 'Referer' header**
   async function fetchVideoStreams(title, season = null, episode = null) {
     try {
-      let url = `https://7df9-2a10-8012-1-e449-1c0e-f70a-cff8-2d58.ngrok-free.app/fetch_stream?title=${encodeURIComponent(title)}`;
+      let url = `https://f8fe-2a10-8012-1-e449-1c0e-f70a-cff8-2d58.ngrok-free.app/fetch_stream?title=${encodeURIComponent(title)}`;
       if (season !== null && episode !== null) {
         url += `&season=${season}&episode=${episode}`;
       }
@@ -67,7 +67,7 @@ function MediaDetails() {
       const response = await fetch(url, {
         headers: {
           'ngrok-skip-browser-warning': 'true',
-          'Referer': 'https://7df9-2a10-8012-1-e449-1c0e-f70a-cff8-2d58.ngrok-free.app'
+          'Referer': 'https://f8fe-2a10-8012-1-e449-1c0e-f70a-cff8-2d58.ngrok-free.app'
         }
       });
       const data = await response.json();
@@ -89,7 +89,7 @@ function MediaDetails() {
       return null;
     }
   }
-  
+
   async function toggleMediaStatus(_tmdbId) {
     if (!user) {
       showErrorPopup('יש להתחבר כדי לעדכן את סטטוס הפריט.');
