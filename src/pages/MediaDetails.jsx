@@ -35,6 +35,7 @@ function MediaDetails() {
   const [selectedResolution, setSelectedResolution] = useState('');
   const [imdbIdGlobal, setImdbIdGlobal] = useState(null);
   const [segmentCount, setSegmentCount] = useState(0);
+  const [isFetchingStream, setIsFetchingStream] = useState(false);
 
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
@@ -43,19 +44,18 @@ function MediaDetails() {
   const creditsCache = useRef(new Map());
   const subtitleContentRef = useRef('');
 
-  // **Authentication Check**
+  // Authentication Check
   useEffect(() => {
     if (!user) {
       navigate('/');
     }
   }, [user, navigate]);
 
-  // **Utility Functions**
+  // Utility Functions
   function showErrorPopup(message) {
     alert(message);
   }
 
-  // **fetchVideoStreams with 'Referer' header**
   async function fetchVideoStreams(title, season = null, episode = null) {
     try {
       let url = `https://7df9-2a10-8012-1-e449-1c0e-f70a-cff8-2d58.ngrok-free.app/fetch_stream?title=${encodeURIComponent(title)}`;
@@ -175,10 +175,15 @@ function MediaDetails() {
         setSeasons(heData.seasons?.filter(s => s.season_number !== 0) || []);
       } else {
         const fullTitleWithYear = `${enData.title || enData.name} ${releaseYear}`;
-        const streamUrls = await fetchVideoStreams(fullTitleWithYear);
-        if (streamUrls) {
-          setCurrentStreamUrls(streamUrls);
-          setShowSubtitleControls(true);
+        setIsFetchingStream(true);
+        try {
+          const streamUrls = await fetchVideoStreams(fullTitleWithYear);
+          if (streamUrls) {
+            setCurrentStreamUrls(streamUrls);
+            setShowSubtitleControls(true);
+          }
+        } finally {
+          setIsFetchingStream(false);
         }
       }
     } catch (err) {
@@ -205,12 +210,17 @@ function MediaDetails() {
     const episode = seasonData.episodes.find(ep => ep.episode_number === parseInt(episodeNumber, 10));
     if (episode) {
       setEpisodeDescription(`פרק ${episode.episode_number}: ${episode.name || 'אין כותרת'} - ${episode.overview || 'תיאור לא זמין'}`);
-      const streamUrls = await fetchVideoStreams(mediaData.englishTitle, seasonNumber, episodeNumber);
-      if (streamUrls) {
-        setCurrentStreamUrls(streamUrls);
-        setShowSubtitleControls(true);
-      } else {
-        setCurrentStreamUrls(null);
+      setIsFetchingStream(true);
+      try {
+        const streamUrls = await fetchVideoStreams(mediaData.englishTitle, seasonNumber, episodeNumber);
+        if (streamUrls) {
+          setCurrentStreamUrls(streamUrls);
+          setShowSubtitleControls(true);
+        } else {
+          setCurrentStreamUrls(null);
+        }
+      } finally {
+        setIsFetchingStream(false);
       }
     } else {
       setEpisodeDescription('פרק לא נמצא.');
@@ -218,7 +228,7 @@ function MediaDetails() {
     }
   }
 
-  // **Subtitle Utility Functions**
+  // Subtitle Utility Functions
   function timeStringToSeconds(timeStr) {
     const [hours, minutes, rest] = timeStr.split(':');
     const [seconds, milliseconds] = rest.split('.');
@@ -349,7 +359,7 @@ function MediaDetails() {
     }
   }
 
-  // **Effects**
+  // Effects
   useEffect(() => {
     if (!tmdbId) {
       setError('לא סופק מזהה מדיה.');
@@ -372,14 +382,13 @@ function MediaDetails() {
     if (mediaType === 'tv' && selectedEpisode) displayEpisodeDetails(selectedSeason, selectedEpisode);
   }, [selectedEpisode, mediaType, tmdbId, selectedSeason]);
 
-  // **Handle Video Source Setup with hls.js**
+  // Handle Video Source Setup with hls.js
   useEffect(() => {
     if (!currentStreamUrls || !selectedResolution || !videoRef.current) return;
 
     const videoSrc = currentStreamUrls[selectedResolution];
     const currentTime = videoRef.current.currentTime || 0;
 
-    // Clean up any existing HLS instance
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
@@ -387,7 +396,7 @@ function MediaDetails() {
 
     if (Hls.isSupported()) {
       hlsRef.current = new Hls({
-        maxBufferLength: 480, // Buffer up to 8 minutes ahead
+        maxBufferLength: 480,
       });
       hlsRef.current.loadSource(videoSrc);
       hlsRef.current.attachMedia(videoRef.current);
@@ -397,7 +406,7 @@ function MediaDetails() {
           const playlist = hlsRef.current.levels[hlsRef.current.currentLevel].details;
           setSegmentCount(playlist.fragments.length);
         } else {
-          setSegmentCount(0); // Default to 0 if details are unavailable
+          setSegmentCount(0);
         }
         videoRef.current.currentTime = currentTime;
         videoRef.current.play().catch(() => {
@@ -418,7 +427,6 @@ function MediaDetails() {
               showErrorPopup('שגיאה לא ידועה בניגון הווידאו.');
           }
         }
-        // Non-fatal errors are silently ignored
       });
     } else {
       videoRef.current.src = videoSrc;
@@ -432,7 +440,6 @@ function MediaDetails() {
       setSegmentCount(0);
     }
 
-    // Fetch subtitles if available
     if (imdbIdGlobal) {
       fetchAndDisplayAvailableSubtitles(imdbIdGlobal, mediaType === 'tv' ? selectedSeason : null, mediaType === 'tv' ? selectedEpisode : null);
     }
@@ -456,12 +463,12 @@ function MediaDetails() {
     }
   }, [currentStreamUrls]);
 
-  // **Render Logic**
+  // Render Logic
   const statusText = status === 'watched' ? 'נצפה' : status === 'to-watch' ? 'לצפייה' : 'לסימון';
 
   if (error) return <div style={{ color: 'red', padding: '20px' }}>{error}</div>;
   if (!tmdbId) return <div style={{ color: 'red', padding: '20px' }}>לא סופק מזהה מדיה.</div>;
-  if (!mediaData) return <div className="loader" />;
+  if (!mediaData) return <div className="loader">טוען...</div>;
 
   return (
     <div className="media-details-container">
@@ -503,23 +510,29 @@ function MediaDetails() {
         </div>
       </div>
 
-      {mediaType === 'movie' && currentStreamUrls && (
-        <div id="movie-stream" className="movie-stream-container">
-          <div>
-            <label htmlFor="resolution-select">בחר רזולוציה:</label>
-            <select
-              id="resolution-select"
-              value={selectedResolution}
-              onChange={e => setSelectedResolution(e.target.value)}
-            >
-              <option value="">בחר רזולוציה</option>
-              {Object.keys(currentStreamUrls).map(res => (
-                <option key={res} value={res}>{res}</option>
-              ))}
-            </select>
-            <video ref={videoRef} controls className="media-video" />
+      {mediaType === 'movie' && (
+        isFetchingStream ? (
+          <div className="loader">טוען זרם...</div>
+        ) : currentStreamUrls ? (
+          <div id="movie-stream" className="movie-stream-container">
+            <div>
+              <label htmlFor="resolution-select">בחר רזולוציה:</label>
+              <select
+                id="resolution-select"
+                value={selectedResolution}
+                onChange={e => setSelectedResolution(e.target.value)}
+              >
+                <option value="">בחר רזולוציה</option>
+                {Object.keys(currentStreamUrls).map(res => (
+                  <option key={res} value={res}>{res}</option>
+                ))}
+              </select>
+              <video ref={videoRef} controls className="media-video" />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div>לא נמצא זרם לסרט זה.</div>
+        )
       )}
 
       {mediaType === 'tv' && (
@@ -549,23 +562,29 @@ function MediaDetails() {
               ))}
             </select>
           </div>
-          {episodeDescription && currentStreamUrls && (
+          {selectedEpisode && (
             <div className="episode-details">
               <h3>{episodeDescription}</h3>
-              <div>
-                <label htmlFor="resolution-select">בחר רזולוציה:</label>
-                <select
-                  id="resolution-select"
-                  value={selectedResolution}
-                  onChange={e => setSelectedResolution(e.target.value)}
-                >
-                  <option value="">בחר רזולוציה</option>
-                  {Object.keys(currentStreamUrls).map(res => (
-                    <option key={res} value={res}>{res}</option>
-                  ))}
-                </select>
-                <video ref={videoRef} controls className="media-video" />
-              </div>
+              {isFetchingStream ? (
+                <div className="loader">טוען זרם...</div>
+              ) : currentStreamUrls ? (
+                <div>
+                  <label htmlFor="resolution-select">בחר רזולוציה:</label>
+                  <select
+                    id="resolution-select"
+                    value={selectedResolution}
+                    onChange={e => setSelectedResolution(e.target.value)}
+                  >
+                    <option value="">בחר רזולוציה</option>
+                    {Object.keys(currentStreamUrls).map(res => (
+                      <option key={res} value={res}>{res}</option>
+                    ))}
+                  </select>
+                  <video ref={videoRef} controls className="media-video" />
+                </div>
+              ) : (
+                <div>לא נמצא זרם לפרק זה.</div>
+              )}
             </div>
           )}
         </div>

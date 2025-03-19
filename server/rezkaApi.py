@@ -24,6 +24,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Simple in-memory cache for media URLs
+media_cache = {}
+
 
 @app.get("/fetch_stream")
 async def fetch_stream(
@@ -41,14 +44,22 @@ async def fetch_stream(
         logger.info(
             f"Fetching stream for title: {title}, season: {season}, episode: {episode}"
         )
-        # Perform a search for the given title
-        search_results = await Search(title).get_page(1)
-        if not search_results:
-            logger.warning("No results found.")
-            return {"error": "אין דיבובים זמינים לתוכן זה."}
 
-        media = search_results[0]
-        rezka = HdRezkaApi(media.url)
+        # Check cache for media URL
+        if title in media_cache:
+            media_url = media_cache[title]
+            logger.info(f"Using cached media URL for title: {title}")
+        else:
+            search_results = await Search(title).get_page(1)
+            if not search_results:
+                logger.warning("No results found.")
+                return {"error": "אין דיבובים זמינים לתוכן זה."}
+            media = search_results[0]
+            media_url = media.url
+            media_cache[title] = media_url
+            logger.info(f"Cached media URL for title: {title}")
+
+        rezka = HdRezkaApi(media_url)
         available_translators = list(rezka.translators.keys())
         logger.info(f"Available translators: {available_translators}")
         logger.info(f"Media type: {rezka.type}")
