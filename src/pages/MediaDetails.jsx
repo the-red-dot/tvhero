@@ -70,18 +70,14 @@ function MediaDetails() {
       });
       const data = await response.json();
       if (data.error) {
-        console.error('Error fetching stream:', data.error);
         showErrorPopup(data.error);
         return null;
       }
       if (data.warning) {
-        console.warn('Warning:', data.warning);
         showErrorPopup(data.warning);
       }
-      console.log('Fetched Stream URLs:', data.stream_urls);
       return data.stream_urls || null;
     } catch (error) {
-      console.error('Error fetching video streams:', error);
       showErrorPopup('שגיאה בטעינת הזרם. נסה שוב מאוחר יותר.');
       return null;
     }
@@ -108,7 +104,6 @@ function MediaDetails() {
       }
       fetchStatus(_tmdbId);
     } catch (error) {
-      console.error('Error updating status:', error);
       showErrorPopup('שגיאה בעדכון סטטוס הפריט.');
     }
   }
@@ -122,7 +117,6 @@ function MediaDetails() {
         setStatus(docSnap.data().statuses?.[_tmdbId] || null);
       }
     } catch (error) {
-      console.error('Error fetching status:', error);
       showErrorPopup('שגיאה בקבלת סטטוס הפריט.');
     }
   }
@@ -188,7 +182,6 @@ function MediaDetails() {
         }
       }
     } catch (err) {
-      console.error('Error fetching media details:', err);
       setError('שגיאה בטעינת פרטי המדיה.');
     }
   }
@@ -336,7 +329,6 @@ function MediaDetails() {
         label: `${sub.version} (${sub.date ? new Date(sub.date).getFullYear() : 'N/A'}) [${sub.release_group || '-'}]`,
       })));
     } catch (error) {
-      console.error('Error fetching available subtitles:', error);
       setAvailableSubtitles([{ id: '', label: 'שגיאה בטעינת כתוביות' }]);
     }
   }
@@ -353,7 +345,6 @@ function MediaDetails() {
       subtitleContentRef.current = content.startsWith('WEBVTT') ? content : convertSRTtoVTT(content);
       applySubtitleSettings();
     } catch (error) {
-      console.error('Error downloading subtitles:', error);
       showErrorPopup('שגיאה בהורדה/פתיחת הכתוביות.');
     }
   }
@@ -381,92 +372,79 @@ function MediaDetails() {
     if (mediaType === 'tv' && selectedEpisode) displayEpisodeDetails(selectedSeason, selectedEpisode);
   }, [selectedEpisode, mediaType, tmdbId, selectedSeason]);
 
-  // **Handle Video Source Setup with hls.js (Updated)**
+  // **Handle Video Source Setup with hls.js**
   useEffect(() => {
-    if (currentStreamUrls && selectedResolution && videoRef.current) {
-      const videoSrc = currentStreamUrls[selectedResolution];
-      const currentTime = videoRef.current.currentTime || 0;
+    if (!currentStreamUrls || !selectedResolution || !videoRef.current) return;
 
-      // Clean up any existing HLS instance
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
+    const videoSrc = currentStreamUrls[selectedResolution];
+    const currentTime = videoRef.current.currentTime || 0;
 
-      if (Hls.isSupported()) {
-        // Initialize hls.js without xhrSetup
-        hlsRef.current = new Hls({
-          maxBufferLength: 480, // Buffer up to 8 minutes ahead
-        });
-        hlsRef.current.loadSource(videoSrc);
-        hlsRef.current.attachMedia(videoRef.current);
-
-        // Handle manifest parsing
-        hlsRef.current.on(Hls.Events.MANIFEST_PARSED, () => {
-          const playlist = hlsRef.current.levels[hlsRef.current.currentLevel].details;
-          const totalSegments = playlist.fragments.length;
-          setSegmentCount(totalSegments);
-          console.log(`Total HLS Segments: ${totalSegments}`);
-          videoRef.current.currentTime = currentTime;
-          videoRef.current.play().catch(err => {
-            console.error('Error playing video:', err);
-            showErrorPopup('שגיאה בניגון הווידאו.');
-          });
-        });
-
-        // Updated error handling
-        hlsRef.current.on(Hls.Events.ERROR, (event, data) => {
-          if (data.fatal) {
-            // Log fatal errors and show popups
-            console.error('Fatal HLS Error:', data);
-            switch (data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR:
-                showErrorPopup('שגיאת רשת: לא ניתן לטעון את הווידאו.');
-                break;
-              case Hls.ErrorTypes.MEDIA_ERROR:
-                showErrorPopup('שגיאת מדיה: בעיה בניגון הווידאו.');
-                break;
-              default:
-                showErrorPopup('שגיאה לא ידועה בניגון הווידאו.');
-            }
-          } else {
-            // Log non-fatal errors only once per session
-            if (!sessionStorage.getItem('hlsNonFatalErrorLogged')) {
-              console.warn('Non-fatal HLS error:', data);
-              sessionStorage.setItem('hlsNonFatalErrorLogged', 'true');
-            }
-          }
-        });
-      } else {
-        // Fallback for browsers that don’t support HLS
-        videoRef.current.src = videoSrc;
-        videoRef.current.load();
-        videoRef.current.addEventListener('loadedmetadata', () => {
-          videoRef.current.currentTime = currentTime;
-          videoRef.current.play().catch(err => {
-            console.error('Error playing video:', err);
-            showErrorPopup('שגיאה בניגון הווידאו.');
-          });
-        }, { once: true });
-        setSegmentCount(0);
-      }
-
-      // Fetch subtitles if available
-      if (imdbIdGlobal) {
-        fetchAndDisplayAvailableSubtitles(imdbIdGlobal, mediaType === 'tv' ? selectedSeason : null, mediaType === 'tv' ? selectedEpisode : null);
-      }
-      const emptyVTT = 'WEBVTT\n\n';
-      subtitleContentRef.current = emptyVTT;
-      applySubtitleSettings();
+    // Clean up any existing HLS instance
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
     }
 
-    // Cleanup on unmount or source change
+    if (Hls.isSupported()) {
+      hlsRef.current = new Hls({
+        maxBufferLength: 480, // Buffer up to 8 minutes ahead
+      });
+      hlsRef.current.loadSource(videoSrc);
+      hlsRef.current.attachMedia(videoRef.current);
+
+      hlsRef.current.on(Hls.Events.MANIFEST_PARSED, () => {
+        if (hlsRef.current.levels && hlsRef.current.currentLevel >= 0 && hlsRef.current.levels[hlsRef.current.currentLevel]?.details) {
+          const playlist = hlsRef.current.levels[hlsRef.current.currentLevel].details;
+          setSegmentCount(playlist.fragments.length);
+        } else {
+          setSegmentCount(0); // Default to 0 if details are unavailable
+        }
+        videoRef.current.currentTime = currentTime;
+        videoRef.current.play().catch(() => {
+          showErrorPopup('שגיאה בניגון הווידאו.');
+        });
+      });
+
+      hlsRef.current.on(Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              showErrorPopup('שגיאת רשת: לא ניתן לטעון את הווידאו.');
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              showErrorPopup('שגיאת מדיה: בעיה בניגון הווידאו.');
+              break;
+            default:
+              showErrorPopup('שגיאה לא ידועה בניגון הווידאו.');
+          }
+        }
+        // Non-fatal errors are silently ignored
+      });
+    } else {
+      videoRef.current.src = videoSrc;
+      videoRef.current.load();
+      videoRef.current.addEventListener('loadedmetadata', () => {
+        videoRef.current.currentTime = currentTime;
+        videoRef.current.play().catch(() => {
+          showErrorPopup('שגיאה בניגון הווידאו.');
+        });
+      }, { once: true });
+      setSegmentCount(0);
+    }
+
+    // Fetch subtitles if available
+    if (imdbIdGlobal) {
+      fetchAndDisplayAvailableSubtitles(imdbIdGlobal, mediaType === 'tv' ? selectedSeason : null, mediaType === 'tv' ? selectedEpisode : null);
+    }
+    const emptyVTT = 'WEBVTT\n\n';
+    subtitleContentRef.current = emptyVTT;
+    applySubtitleSettings();
+
     return () => {
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;
       }
-      sessionStorage.removeItem('hlsNonFatalErrorLogged'); // Reset for new streams
     };
   }, [currentStreamUrls, selectedResolution, imdbIdGlobal, mediaType, selectedSeason, selectedEpisode]);
 
