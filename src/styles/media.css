@@ -219,12 +219,14 @@
   border: 1px solid #555;
   background-color: #333;
   color: #fff;
+  width: 100%; /* Ensure inputs and selects take full width of their container */
+  box-sizing: border-box; /* Include padding and border in width calculation */
 }
 
 .control-group input[type="color"] {
   padding: 0;
   height: 30px;
-  width: 50px;
+  width: 50px; /* Keep color input smaller, but it won’t cause overflow */
 }
 
 .control-group input[type="checkbox"] {
@@ -273,7 +275,7 @@
   }
 
   .subtitle-controls {
-    flex-direction: column;
+    flex-direction: column; /* Stack subtitle controls vertically on medium screens */
   }
 
   .movie-stream-container select,
@@ -307,11 +309,19 @@
 
   .control-group input,
   .control-group select {
-    font-size: 12px;
+    font-size: 12px; /* Reduce font size for better fit on small screens */
   }
 
   .action-button {
     font-size: 12px;
     padding: 8px 12px;
+  }
+
+  .button-group {
+    flex-direction: column; /* Stack buttons vertically on very small screens */
+  }
+
+  .action-button {
+    width: 100%; /* Buttons take full width to prevent overflow */
   }
 }
