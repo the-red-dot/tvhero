@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5500",
         "https://tvhero.vercel.app",
         "https://tvhero-git-main-geras-projects-5ef45cdd.vercel.app",
     ],
@@ -25,7 +24,7 @@ app.add_middleware(
 )
 
 
-@app.get("/fetch_stream")
+@app.get("/api/rezka/fetch_stream")
 async def fetch_stream(
     request: Request,
     title: str = Query(None),  # Make title optional
