@@ -1,4 +1,2 @@
 fastapi
 mangum
-hdrezka
-HdRezkaApi
