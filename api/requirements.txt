@@ -1,4 +1,0 @@
-fastapi
-mangum
-hdrezka
-HdRezkaApi
