@@ -55,7 +55,7 @@ function MediaDetails() {
     alert(message);
   }
 
-  // Step 2: Add Referer header to fetchVideoStreams
+  // **fetchVideoStreams with 'Referer' header**
   async function fetchVideoStreams(title, season = null, episode = null) {
     try {
       let url = `https://7df9-2a10-8012-1-e449-1c0e-f70a-cff8-2d58.ngrok-free.app/fetch_stream?title=${encodeURIComponent(title)}`;
@@ -381,28 +381,27 @@ function MediaDetails() {
     if (mediaType === 'tv' && selectedEpisode) displayEpisodeDetails(selectedSeason, selectedEpisode);
   }, [selectedEpisode, mediaType, tmdbId, selectedSeason]);
 
-  // **Handle Video Source Setup with hls.js (Step 2 & Step 3)**
+  // **Handle Video Source Setup with hls.js (Updated)**
   useEffect(() => {
     if (currentStreamUrls && selectedResolution && videoRef.current) {
       const videoSrc = currentStreamUrls[selectedResolution];
       const currentTime = videoRef.current.currentTime || 0;
 
+      // Clean up any existing HLS instance
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;
       }
 
       if (Hls.isSupported()) {
-        // Step 2: Add Referer header to hls.js requests
+        // Initialize hls.js without xhrSetup
         hlsRef.current = new Hls({
           maxBufferLength: 480, // Buffer up to 8 minutes ahead
-          xhrSetup: (xhr, url) => {
-            xhr.setRequestHeader('Referer', 'https://7df9-2a10-8012-1-e449-1c0e-f70a-cff8-2d58.ngrok-free.app');
-          },
         });
         hlsRef.current.loadSource(videoSrc);
         hlsRef.current.attachMedia(videoRef.current);
 
+        // Handle manifest parsing
         hlsRef.current.on(Hls.Events.MANIFEST_PARSED, () => {
           const playlist = hlsRef.current.levels[hlsRef.current.currentLevel].details;
           const totalSegments = playlist.fragments.length;
@@ -415,10 +414,11 @@ function MediaDetails() {
           });
         });
 
-        // Step 3: Enhanced HLS Error Handling
+        // Updated error handling
         hlsRef.current.on(Hls.Events.ERROR, (event, data) => {
-          console.error('HLS Error:', data);
           if (data.fatal) {
+            // Log fatal errors and show popups
+            console.error('Fatal HLS Error:', data);
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
                 showErrorPopup('שגיאת רשת: לא ניתן לטעון את הווידאו.');
@@ -430,10 +430,15 @@ function MediaDetails() {
                 showErrorPopup('שגיאה לא ידועה בניגון הווידאו.');
             }
           } else {
-            console.warn('Non-fatal HLS error:', data);
+            // Log non-fatal errors only once per session
+            if (!sessionStorage.getItem('hlsNonFatalErrorLogged')) {
+              console.warn('Non-fatal HLS error:', data);
+              sessionStorage.setItem('hlsNonFatalErrorLogged', 'true');
+            }
           }
         });
       } else {
+        // Fallback for browsers that don’t support HLS
         videoRef.current.src = videoSrc;
         videoRef.current.load();
         videoRef.current.addEventListener('loadedmetadata', () => {
@@ -446,6 +451,7 @@ function MediaDetails() {
         setSegmentCount(0);
       }
 
+      // Fetch subtitles if available
       if (imdbIdGlobal) {
         fetchAndDisplayAvailableSubtitles(imdbIdGlobal, mediaType === 'tv' ? selectedSeason : null, mediaType === 'tv' ? selectedEpisode : null);
       }
@@ -454,11 +460,13 @@ function MediaDetails() {
       applySubtitleSettings();
     }
 
+    // Cleanup on unmount or source change
     return () => {
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;
       }
+      sessionStorage.removeItem('hlsNonFatalErrorLogged'); // Reset for new streams
     };
   }, [currentStreamUrls, selectedResolution, imdbIdGlobal, mediaType, selectedSeason, selectedEpisode]);
 
