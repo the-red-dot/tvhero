@@ -52,14 +52,12 @@ function MediaDetails() {
 
   async function fetchVideoStreams(title, season = null, episode = null) {
     try {
-      let url = `/api/rezka/fetch_stream?title=${encodeURIComponent(title)}`;
+      let url = `https://f688-2a10-8012-1-e449-1c0e-f70a-cff8-2d58.ngrok-free.app/fetch_stream?title=${encodeURIComponent(title)}`;
       if (season !== null && episode !== null) {
         url += `&season=${season}&episode=${episode}`;
       }
-      const response = await fetch(url);
-      const text = await response.text();
-      console.log('Raw API response:', text);
-      const data = JSON.parse(text);
+      const response = await fetch(url, { headers: { 'ngrok-skip-browser-warning': 'true' } });
+      const data = await response.json();
       if (data.error) {
         console.error('Error fetching stream:', data.error);
         showErrorPopup(data.error);
@@ -77,7 +75,7 @@ function MediaDetails() {
       return null;
     }
   }
-  
+
   async function toggleMediaStatus(_tmdbId) {
     if (!currentUser) {
       showErrorPopup('יש להתחבר כדי לעדכן את סטטוס הפריט.');

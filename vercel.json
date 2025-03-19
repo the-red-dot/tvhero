@@ -1,5 +1,5 @@
 {
-  "routes": [
-    { "src": "/api/test", "dest": "/api/test.py" }
-  ]
-}
+    "rewrites": [
+      { "source": "/(.*)", "destination": "/index.html" }
+    ]
+  }
