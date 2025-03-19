@@ -57,9 +57,9 @@ function MediaDetails() {
         url += `&season=${season}&episode=${episode}`;
       }
       const response = await fetch(url);
-      const text = await response.text(); // Get raw response
+      const text = await response.text();
       console.log('Raw API response:', text);
-      const data = JSON.parse(text); // Parse as JSON
+      const data = JSON.parse(text);
       if (data.error) {
         console.error('Error fetching stream:', data.error);
         showErrorPopup(data.error);
