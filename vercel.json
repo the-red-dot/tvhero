@@ -1,7 +1,5 @@
 {
   "routes": [
-    { "src": "/api/test", "dest": "/api/test.py" },
-    { "src": "/api/rezka/(.*)", "dest": "/api/rezka.py" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/api/test", "dest": "/api/test.py" }
   ]
 }
