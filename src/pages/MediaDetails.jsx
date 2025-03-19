@@ -52,7 +52,7 @@ function MediaDetails() {
 
   async function fetchVideoStreams(title, season = null, episode = null) {
     try {
-      let url = `/api/rezka.py/fetch_stream?title=${encodeURIComponent(title)}`;
+      let url = `/api/rezka/fetch_stream?title=${encodeURIComponent(title)}`;
       if (season !== null && episode !== null) {
         url += `&season=${season}&episode=${episode}`;
       }
