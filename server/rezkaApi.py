@@ -17,7 +17,7 @@ app.add_middleware(
         "http://localhost:5500",
         "https://tvhero.vercel.app",
         "https://tvhero-git-main-geras-projects-5ef45cdd.vercel.app",
-        "https://1ed5-2a10-8012-f-9d50-a0da-8c70-edfb-3eb5.ngrok-free.app",
+        "https://7df9-2a10-8012-1-e449-1c0e-f70a-cff8-2d58.ngrok-free.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
