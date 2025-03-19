@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://localhost:5500",
         "https://tvhero.vercel.app",
         "https://tvhero-git-main-geras-projects-5ef45cdd.vercel.app",
     ],
@@ -24,14 +25,18 @@ app.add_middleware(
 )
 
 
-@app.get("/api/rezka/fetch_stream")
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
+
+@app.get("/fetch_stream")
 async def fetch_stream(
     request: Request,
-    title: str = Query(None),  # Make title optional
+    title: str = Query(None),
     season: int = Query(None),
     episode: int = Query(None),
 ):
-    # Manually enforce title requirement for GET requests
     if request.method == "GET" and not title:
         raise HTTPException(status_code=400, detail="Title is required")
 
