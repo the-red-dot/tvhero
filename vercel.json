@@ -1,6 +1,6 @@
 {
   "routes": [
-    { "src": "/api/rezka/(.*)", "dest": "/api/rezka.py" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/api/rezka/(.*)", "dest": "/api/rezka.py" }
   ]
 }
+
