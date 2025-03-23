@@ -52,7 +52,10 @@ function MediaDetails() {
 
   // **Utility Functions**
   function showErrorPopup(message) {
-    alert(message);
+    // Instead of alerting repeatedly, log to console.
+    console.error(message);
+    // Uncomment the next line if you want to show an alert occasionally.
+    // alert(message);
   }
 
   // **fetchVideoStreams with 'Referer' header**
@@ -79,7 +82,8 @@ function MediaDetails() {
       }
       if (data.warning) {
         console.warn(`Warning from backend: ${data.warning}`);
-        showErrorPopup(data.warning);
+        // Optionally log the warning without an alert:
+        // showErrorPopup(data.warning);
       }
       console.log(`Stream URLs received:`, data.stream_urls);
       return data.stream_urls || null;
@@ -410,9 +414,8 @@ function MediaDetails() {
           setSegmentCount(0); // Default to 0 if details are unavailable
         }
         videoRef.current.currentTime = currentTime;
-        videoRef.current.play().catch(() => {
-          showErrorPopup('שגיאה בניגון הווידאו.');
-        });
+        // Log error instead of showing an alert if play fails
+        videoRef.current.play().catch(err => console.error("Play error:", err));
       });
 
       hlsRef.current.on(Hls.Events.ERROR, (event, data) => {
@@ -422,10 +425,13 @@ function MediaDetails() {
               showErrorPopup('שגיאת רשת: לא ניתן לטעון את הווידאו.');
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
-              showErrorPopup('שגיאת מדיה: בעיה בניגון הווידאו.');
+              // Try to recover from media error instead of showing popup
+              hlsRef.current.recoverMediaError();
               break;
             default:
-              showErrorPopup('שגיאה לא ידועה בניגון הווידאו.');
+              logger.error("Unknown fatal error:", data);
+              // Optionally show popup for unknown fatal errors:
+              // showErrorPopup('שגיאה לא ידועה בניגון הווידאו.');
           }
         }
         // Non-fatal errors are silently ignored
@@ -435,9 +441,7 @@ function MediaDetails() {
       videoRef.current.load();
       videoRef.current.addEventListener('loadedmetadata', () => {
         videoRef.current.currentTime = currentTime;
-        videoRef.current.play().catch(() => {
-          showErrorPopup('שגיאה בניגון הווידאו.');
-        });
+        videoRef.current.play().catch(err => console.error("Play error:", err));
       }, { once: true });
       setSegmentCount(0);
     }

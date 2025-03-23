@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# Configure CORS (including your ngrok address)
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -68,28 +68,18 @@ class PatchedRezkaApi(HdRezkaApi):
                 cookies=self.cookies,
             )
             if not r.text.strip():
-                raise FetchFailed  # Raise without message
+                raise FetchFailed("Empty response from server.")
 
             try:
                 resp = r.json()
             except Exception as e:
-                logger.error("JSON parse error: %s", e)
-                raise FetchFailed from e
+                raise FetchFailed(f"JSON parse error: {e}") from e
 
             if not (resp.get("success") and resp.get("url")):
-                raise FetchFailed
+                raise FetchFailed("No 'url' in JSON response or success=false.")
 
             stream_data = resp["url"]
-            try:
-                cleaned = self.clearTrash(stream_data)
-            except UnicodeDecodeError as e:
-                logger.error("Unicode decode error in clearTrash: %s", e)
-                # Fallback: if stream_data is bytes, decode ignoring errors; otherwise, use as is
-                if isinstance(stream_data, bytes):
-                    cleaned = stream_data.decode("utf-8", errors="ignore")
-                else:
-                    cleaned = stream_data
-            arr = cleaned.split(",")
+            arr = self.clearTrash(stream_data).split(",")
             new_stream = HdRezkaStream(
                 season=season_num,
                 episode=episode_num,
@@ -115,6 +105,7 @@ class PatchedRezkaApi(HdRezkaApi):
             return super().getStream(
                 season, episode, translation, priority, non_priority
             )
+
         elif self.type == TVSeries:
             if not (season and episode):
                 raise ValueError(
@@ -122,6 +113,7 @@ class PatchedRezkaApi(HdRezkaApi):
                 )
             translator_id = self._pick_translator_id(translation)
             return single_tv_request(translator_id, int(season), int(episode))
+
         else:
             raise TypeError(
                 "Undefined content type or not recognized as tv_series/movie."
@@ -129,7 +121,9 @@ class PatchedRezkaApi(HdRezkaApi):
 
     def _pick_translator_id(self, user_translation):
         """
-        Handles translator selection when user_translation is an integer or a string.
+        In some calls, user_translation might be an integer (e.g. 238).
+        In others, it might be a string (e.g. '238' or translator name).
+        Handle both cases gracefully.
         """
         if not self.translators:
             raise ValueError("No translators found on this page.")
@@ -140,11 +134,13 @@ class PatchedRezkaApi(HdRezkaApi):
             sorted_translators = self.sort_translators(translators_dict)
             return list(sorted_translators.keys())
 
+        # If user_translation is None or falsy, pick the highest-priority ID
         if not user_translation:
             best_id = sort_translators_by_priority()[0]
             logger.info("No translator specified. Using best ID: %s", best_id)
             return best_id
 
+        # If user_translation is already an integer
         if isinstance(user_translation, int):
             tid = user_translation
             if tid in translators_dict:
@@ -159,6 +155,7 @@ class PatchedRezkaApi(HdRezkaApi):
                     f"Translator ID {tid} not found. Available: {list(translators_dict.keys())}"
                 )
 
+        # If user_translation is a string that might be numeric
         if isinstance(user_translation, str) and user_translation.isdigit():
             tid = int(user_translation)
             if tid in translators_dict:
@@ -173,6 +170,7 @@ class PatchedRezkaApi(HdRezkaApi):
                     f"Translator ID {tid} not found. Available: {list(translators_dict.keys())}"
                 )
 
+        # Otherwise, user_translation is a string translator name
         user_translation_lower = str(user_translation).lower()
         for tid, info in translators_dict.items():
             if info["name"].lower() == user_translation_lower:
@@ -255,8 +253,11 @@ def fetch_stream(
             logger.info(
                 f"Fetching stream for TV series: season {season}, episode {episode}"
             )
+            # Pass an integer translator ID so _pick_translator_id won't break:
             stream = rezka.getStream(
-                season=season, episode=episode, translation=selected_translator
+                season=season,
+                episode=episode,
+                translation=selected_translator,  # int
             )
         else:
             logger.info("Fetching stream for movie")
