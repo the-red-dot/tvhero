@@ -43,21 +43,19 @@ function MediaDetails() {
   const creditsCache = useRef(new Map());
   const subtitleContentRef = useRef('');
 
-  // Authentication Check
   useEffect(() => {
     if (!user) {
       navigate('/');
     }
   }, [user, navigate]);
 
-  // Utility function: Log errors to console instead of popping up alerts repeatedly.
+  // Log errors to console (alerts are commented out)
   function showErrorPopup(message) {
     console.error(message);
-    // Optionally, you can uncomment the alert below if you want to notify the user occasionally.
     // alert(message);
   }
 
-  // fetchVideoStreams now uses the Heroku endpoint instead of ngrok.
+  // Use the Heroku endpoint instead of ngrok
   async function fetchVideoStreams(title, season = null, episode = null) {
     try {
       const herokuUrl = "https://tvhero-rezka-stream-api-1f6d3673c9ce.herokuapp.com";
@@ -82,7 +80,6 @@ function MediaDetails() {
       }
       if (data.warning) {
         console.warn(`Warning from backend: ${data.warning}`);
-        // Optionally, log the warning without alerting the user.
       }
       console.log("Stream URLs received:", data.stream_urls);
       return data.stream_urls || null;
@@ -146,12 +143,8 @@ function MediaDetails() {
 
       const releaseYear =
         mType === 'movie'
-          ? heData.release_date
-            ? new Date(heData.release_date).getFullYear()
-            : 'N/A'
-          : heData.first_air_date
-          ? new Date(heData.first_air_date).getFullYear()
-            : 'N/A';
+          ? heData.release_date ? new Date(heData.release_date).getFullYear() : 'N/A'
+          : heData.first_air_date ? new Date(heData.first_air_date).getFullYear() : 'N/A';
 
       let cast = 'אין מידע';
       if (!creditsCache.current.has(_tmdbId)) {
@@ -168,9 +161,7 @@ function MediaDetails() {
         hebrewTitle: heData.title || heData.name || 'אין כותרת בעברית',
         englishTitle: enData.title || enData.name || 'No English Title',
         releaseYear,
-        poster: heData.poster_path
-          ? `https://image.tmdb.org/t/p/w500${heData.poster_path}`
-          : 'https://via.placeholder.com/300x450?text=No+Image',
+        poster: heData.poster_path ? `https://image.tmdb.org/t/p/w500${heData.poster_path}` : 'https://via.placeholder.com/300x450?text=No+Image',
         overview: heData.overview || 'תיאור לא זמין',
         rating: heData.vote_average?.toFixed(1) || 'N/A',
         genres: heData.genres?.map(g => g.name).join(', ') || 'N/A',
@@ -214,9 +205,7 @@ function MediaDetails() {
 
     const episode = seasonData.episodes.find(ep => ep.episode_number === parseInt(episodeNumber, 10));
     if (episode) {
-      setEpisodeDescription(
-        `פרק ${episode.episode_number}: ${episode.name || 'אין כותרת'} - ${episode.overview || 'תיאור לא זמין'}`
-      );
+      setEpisodeDescription(`פרק ${episode.episode_number}: ${episode.name || 'אין כותרת'} - ${episode.overview || 'תיאור לא זמין'}`);
       const fullTitleWithYear = `${mediaData.englishTitle} ${mediaData.releaseYear}`;
       const streamUrls = await fetchVideoStreams(fullTitleWithYear, seasonNumber, episodeNumber);
       if (streamUrls) {
@@ -483,7 +472,6 @@ function MediaDetails() {
           <em>{mediaData.englishTitle} ({mediaData.releaseYear})</em>
         </h1>
       </header>
-
       <div className="media-details">
         <div className="poster-container">
           <img id="media-poster" src={mediaData.poster} alt="Media Poster" />
@@ -513,7 +501,6 @@ function MediaDetails() {
           </div>
         </div>
       </div>
-
       {mediaType === 'movie' && currentStreamUrls && (
         <div id="movie-stream" className="movie-stream-container">
           <div>
@@ -532,7 +519,6 @@ function MediaDetails() {
           </div>
         </div>
       )}
-
       {mediaType === 'tv' && (
         <div className="season-episode-container">
           <h2>בחר עונה ופרק</h2>
@@ -581,7 +567,6 @@ function MediaDetails() {
           )}
         </div>
       )}
-
       {showSubtitleControls && (
         <div className="subtitle-controls-container">
           <h2>הגדרות כתוביות</h2>
