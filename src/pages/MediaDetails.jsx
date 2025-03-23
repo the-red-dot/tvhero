@@ -43,24 +43,25 @@ function MediaDetails() {
   const creditsCache = useRef(new Map());
   const subtitleContentRef = useRef('');
 
-  // Authentication Check
+  // **Authentication Check**
   useEffect(() => {
     if (!user) {
       navigate('/');
     }
   }, [user, navigate]);
 
-  // Utility: Log errors to the console.
+  // **Utility Functions**
   function showErrorPopup(message) {
+    // Instead of alerting repeatedly, log to console.
     console.error(message);
-    // Optionally, uncomment alert if needed: alert(message);
+    // Uncomment the next line if you want to show an alert occasionally.
+    // alert(message);
   }
 
-  // fetchVideoStreams now uses your Heroku endpoint.
+  // **fetchVideoStreams with 'Referer' header**
   async function fetchVideoStreams(title, season = null, episode = null) {
     try {
-      const herokuUrl = "https://tvhero-rezka-stream-api-1f6d3673c9ce.herokuapp.com";
-      let url = `${herokuUrl}/fetch_stream?title=${encodeURIComponent(title)}`;
+      let url = `https://tvhero-rezka-stream-api-1f6d3673c9ce.herokuapp.com//fetch_stream?title=${encodeURIComponent(title)}`;
       if (season !== null && episode !== null) {
         url += `&season=${season}&episode=${episode}`;
       }
@@ -68,11 +69,12 @@ function MediaDetails() {
       console.log(`Request URL: ${url}`);
       const response = await fetch(url, {
         headers: {
-          'Referer': herokuUrl,
+          'ngrok-skip-browser-warning': 'true',
+          'Referer': 'https://tvhero-rezka-stream-api-1f6d3673c9ce.herokuapp.com/'
         }
       });
       const data = await response.json();
-      console.log("Backend response:", data);
+      console.log(`Backend response:`, data);
       if (data.error) {
         console.error(`Error from backend: ${data.error}`);
         showErrorPopup(data.error);
@@ -80,8 +82,10 @@ function MediaDetails() {
       }
       if (data.warning) {
         console.warn(`Warning from backend: ${data.warning}`);
+        // Optionally log the warning without an alert:
+        // showErrorPopup(data.warning);
       }
-      console.log("Stream URLs received:", data.stream_urls);
+      console.log(`Stream URLs received:`, data.stream_urls);
       return data.stream_urls || null;
     } catch (error) {
       console.error(`Fetch error: ${error.message}`);
@@ -204,6 +208,7 @@ function MediaDetails() {
     setEpisodes(seasonData?.episodes || []);
   }
 
+  // Updated: Build full title (with year) for TV series when fetching episode stream URLs
   async function displayEpisodeDetails(seasonNumber, episodeNumber) {
     const cacheKey = `${tmdbId}-season-${seasonNumber}`;
     const seasonData = episodesCache.current.get(cacheKey);
@@ -211,9 +216,8 @@ function MediaDetails() {
 
     const episode = seasonData.episodes.find(ep => ep.episode_number === parseInt(episodeNumber, 10));
     if (episode) {
-      setEpisodeDescription(
-        `פרק ${episode.episode_number}: ${episode.name || 'אין כותרת'} - ${episode.overview || 'תיאור לא זמין'}`
-      );
+      setEpisodeDescription(`פרק ${episode.episode_number}: ${episode.name || 'אין כותרת'} - ${episode.overview || 'תיאור לא זמין'}`);
+      // Build full title including release year for TV series as well
       const fullTitleWithYear = `${mediaData.englishTitle} ${mediaData.releaseYear}`;
       const streamUrls = await fetchVideoStreams(fullTitleWithYear, seasonNumber, episodeNumber);
       if (streamUrls) {
@@ -228,7 +232,7 @@ function MediaDetails() {
     }
   }
 
-  // Subtitle utility functions
+  // **Subtitle Utility Functions**
   function timeStringToSeconds(timeStr) {
     const [hours, minutes, rest] = timeStr.split(':');
     const [seconds, milliseconds] = rest.split('.');
@@ -334,12 +338,10 @@ function MediaDetails() {
       } else if (season && episode && allSubs[season]?.[episode]) {
         subtitlesList = allSubs[season][episode];
       }
-      setAvailableSubtitles(
-        subtitlesList.map(sub => ({
-          id: sub.id,
-          label: `${sub.version} (${sub.date ? new Date(sub.date).getFullYear() : 'N/A'}) [${sub.release_group || '-'}]`,
-        }))
-      );
+      setAvailableSubtitles(subtitlesList.map(sub => ({
+        id: sub.id,
+        label: `${sub.version} (${sub.date ? new Date(sub.date).getFullYear() : 'N/A'}) [${sub.release_group || '-'}]`,
+      })));
     } catch (error) {
       setAvailableSubtitles([{ id: '', label: 'שגיאה בטעינת כתוביות' }]);
     }
@@ -361,7 +363,7 @@ function MediaDetails() {
     }
   }
 
-  // Effects
+  // **Effects**
   useEffect(() => {
     if (!tmdbId) {
       setError('לא סופק מזהה מדיה.');
@@ -377,31 +379,30 @@ function MediaDetails() {
   }, [mediaData, user, tmdbId]);
 
   useEffect(() => {
-    if (mediaType === 'tv' && selectedSeason) {
-      fetchAndPopulateEpisodes(tmdbId, selectedSeason);
-    }
+    if (mediaType === 'tv' && selectedSeason) fetchAndPopulateEpisodes(tmdbId, selectedSeason);
   }, [selectedSeason, mediaType, tmdbId]);
 
   useEffect(() => {
-    if (mediaType === 'tv' && selectedEpisode) {
-      displayEpisodeDetails(selectedSeason, selectedEpisode);
-    }
+    if (mediaType === 'tv' && selectedEpisode) displayEpisodeDetails(selectedSeason, selectedEpisode);
   }, [selectedEpisode, mediaType, tmdbId, selectedSeason]);
 
-  // HLS Video Source Setup
+  // **Handle Video Source Setup with hls.js**
   useEffect(() => {
     if (!currentStreamUrls || !selectedResolution || !videoRef.current) return;
 
     const videoSrc = currentStreamUrls[selectedResolution];
     const currentTime = videoRef.current.currentTime || 0;
 
+    // Clean up any existing HLS instance
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
 
     if (Hls.isSupported()) {
-      hlsRef.current = new Hls({ maxBufferLength: 480 });
+      hlsRef.current = new Hls({
+        maxBufferLength: 480, // Buffer up to 8 minutes ahead
+      });
       hlsRef.current.loadSource(videoSrc);
       hlsRef.current.attachMedia(videoRef.current);
 
@@ -410,9 +411,10 @@ function MediaDetails() {
           const playlist = hlsRef.current.levels[hlsRef.current.currentLevel].details;
           setSegmentCount(playlist.fragments.length);
         } else {
-          setSegmentCount(0);
+          setSegmentCount(0); // Default to 0 if details are unavailable
         }
         videoRef.current.currentTime = currentTime;
+        // Log error instead of showing an alert if play fails
         videoRef.current.play().catch(err => console.error("Play error:", err));
       });
 
@@ -423,12 +425,16 @@ function MediaDetails() {
               showErrorPopup('שגיאת רשת: לא ניתן לטעון את הווידאו.');
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
+              // Try to recover from media error instead of showing popup
               hlsRef.current.recoverMediaError();
               break;
             default:
-              console.error("Unknown fatal error:", data);
+              logger.error("Unknown fatal error:", data);
+              // Optionally show popup for unknown fatal errors:
+              // showErrorPopup('שגיאה לא ידועה בניגון הווידאו.');
           }
         }
+        // Non-fatal errors are silently ignored
       });
     } else {
       videoRef.current.src = videoSrc;
@@ -440,12 +446,9 @@ function MediaDetails() {
       setSegmentCount(0);
     }
 
+    // Fetch subtitles if available
     if (imdbIdGlobal) {
-      fetchAndDisplayAvailableSubtitles(
-        imdbIdGlobal,
-        mediaType === 'tv' ? selectedSeason : null,
-        mediaType === 'tv' ? selectedEpisode : null
-      );
+      fetchAndDisplayAvailableSubtitles(imdbIdGlobal, mediaType === 'tv' ? selectedSeason : null, mediaType === 'tv' ? selectedEpisode : null);
     }
     const emptyVTT = 'WEBVTT\n\n';
     subtitleContentRef.current = emptyVTT;
@@ -467,6 +470,7 @@ function MediaDetails() {
     }
   }, [currentStreamUrls]);
 
+  // **Render Logic**
   const statusText = status === 'watched' ? 'נצפה' : status === 'to-watch' ? 'לצפייה' : 'לסימון';
 
   if (error) return <div style={{ color: 'red', padding: '20px' }}>{error}</div>;
@@ -482,6 +486,7 @@ function MediaDetails() {
           <em>{mediaData.englishTitle} ({mediaData.releaseYear})</em>
         </h1>
       </header>
+
       <div className="media-details">
         <div className="poster-container">
           <img id="media-poster" src={mediaData.poster} alt="Media Poster" />
@@ -511,11 +516,16 @@ function MediaDetails() {
           </div>
         </div>
       </div>
+
       {mediaType === 'movie' && currentStreamUrls && (
         <div id="movie-stream" className="movie-stream-container">
           <div>
             <label htmlFor="resolution-select">בחר רזולוציה:</label>
-            <select id="resolution-select" value={selectedResolution} onChange={e => setSelectedResolution(e.target.value)}>
+            <select
+              id="resolution-select"
+              value={selectedResolution}
+              onChange={e => setSelectedResolution(e.target.value)}
+            >
               <option value="">בחר רזולוציה</option>
               {Object.keys(currentStreamUrls).map(res => (
                 <option key={res} value={res}>{res}</option>
@@ -525,6 +535,7 @@ function MediaDetails() {
           </div>
         </div>
       )}
+
       {mediaType === 'tv' && (
         <div className="season-episode-container">
           <h2>בחר עונה ופרק</h2>
@@ -539,7 +550,11 @@ function MediaDetails() {
               ))}
             </select>
             <label htmlFor="episode-select">פרק:</label>
-            <select value={selectedEpisode} onChange={e => setSelectedEpisode(e.target.value)} disabled={!selectedSeason}>
+            <select
+              value={selectedEpisode}
+              onChange={e => setSelectedEpisode(e.target.value)}
+              disabled={!selectedSeason}
+            >
               <option value="">בחר פרק</option>
               {episodes.map(episode => (
                 <option key={episode.episode_number} value={episode.episode_number}>
@@ -553,7 +568,11 @@ function MediaDetails() {
               <h3>{episodeDescription}</h3>
               <div>
                 <label htmlFor="resolution-select">בחר רזולוציה:</label>
-                <select id="resolution-select" value={selectedResolution} onChange={e => setSelectedResolution(e.target.value)}>
+                <select
+                  id="resolution-select"
+                  value={selectedResolution}
+                  onChange={e => setSelectedResolution(e.target.value)}
+                >
                   <option value="">בחר רזולוציה</option>
                   {Object.keys(currentStreamUrls).map(res => (
                     <option key={res} value={res}>{res}</option>
@@ -565,6 +584,7 @@ function MediaDetails() {
           )}
         </div>
       )}
+
       {showSubtitleControls && (
         <div className="subtitle-controls-container">
           <h2>הגדרות כתוביות</h2>
@@ -596,19 +616,44 @@ function MediaDetails() {
             </div>
             <div className="control-group">
               <label htmlFor="font-size">גודל גופן (px):</label>
-              <input type="number" id="font-size" value={fontSize} min="10" max="100" onChange={e => setFontSize(parseInt(e.target.value))} />
+              <input
+                type="number"
+                id="font-size"
+                value={fontSize}
+                min="10"
+                max="100"
+                onChange={e => setFontSize(parseInt(e.target.value))}
+              />
             </div>
             <div className="control-group">
               <label htmlFor="subtitle-color">צבע כתוביות:</label>
-              <input type="color" id="subtitle-color" value={subtitleColor} onChange={e => setSubtitleColor(e.target.value)} />
+              <input
+                type="color"
+                id="subtitle-color"
+                value={subtitleColor}
+                onChange={e => setSubtitleColor(e.target.value)}
+              />
             </div>
             <div className="control-group">
               <label htmlFor="subtitle-position">מיקום כתוביות (%):</label>
-              <input type="number" id="subtitle-position" value={subtitlePosition} min="0" max="100" onChange={e => setSubtitlePosition(parseInt(e.target.value))} />
+              <input
+                type="number"
+                id="subtitle-position"
+                value={subtitlePosition}
+                min="0"
+                max="100"
+                onChange={e => setSubtitlePosition(parseInt(e.target.value))}
+              />
             </div>
             <div className="control-group">
               <label htmlFor="timing-offset">הסטת תזמון (שניות):</label>
-              <input type="number" id="timing-offset" value={timingOffset} step="0.1" onChange={e => setTimingOffset(parseFloat(e.target.value))} />
+              <input
+                type="number"
+                id="timing-offset"
+                value={timingOffset}
+                step="0.1"
+                onChange={e => setTimingOffset(parseFloat(e.target.value))}
+              />
             </div>
             <div className="control-group">
               <label htmlFor="font-family">משפחת גופן:</label>
@@ -621,7 +666,12 @@ function MediaDetails() {
               </select>
             </div>
             <div className="control-group">
-              <input type="checkbox" id="flip-punctuation" checked={shouldFlipPunctuation} onChange={e => setShouldFlipPunctuation(e.target.checked)} />
+              <input
+                type="checkbox"
+                id="flip-punctuation"
+                checked={shouldFlipPunctuation}
+                onChange={e => setShouldFlipPunctuation(e.target.checked)}
+              />
               <label htmlFor="flip-punctuation">הפוך סימני פיסוק</label>
             </div>
             <div className="control-group">
@@ -632,25 +682,35 @@ function MediaDetails() {
                   <option key={sub.id} value={sub.id}>{sub.label}</option>
                 ))}
               </select>
-              <button id="load-selected-subtitles" className="action-button" onClick={() => {
-                const subId = document.getElementById('available-subtitles').value;
-                if (!subId) showErrorPopup('לא נבחרו כתוביות.');
-                else downloadAndLoadSelectedSubtitle(subId);
-              }}>
+              <button
+                id="load-selected-subtitles"
+                className="action-button"
+                onClick={() => {
+                  const subId = document.getElementById('available-subtitles').value;
+                  if (!subId) showErrorPopup('לא נבחרו כתוביות.');
+                  else downloadAndLoadSelectedSubtitle(subId);
+                }}
+              >
                 טען כתוביות נבחרות
               </button>
             </div>
             <div className="button-group">
-              <button id="apply-settings" className="action-button" onClick={applySubtitleSettings}>החל הגדרות</button>
-              <button id="reset-settings" className="action-button" onClick={() => {
-                setFontSize(60);
-                setSubtitleColor('#FFFFFF');
-                setSubtitlePosition(10);
-                setTimingOffset(0);
-                setFontFamily('Arial');
-                setShouldFlipPunctuation(true);
-                applySubtitleSettings();
-              }}>
+              <button id="apply-settings" className="action-button" onClick={applySubtitleSettings}>
+                החל הגדרות
+              </button>
+              <button
+                id="reset-settings"
+                className="action-button"
+                onClick={() => {
+                  setFontSize(60);
+                  setSubtitleColor('#FFFFFF');
+                  setSubtitlePosition(10);
+                  setTimingOffset(0);
+                  setFontFamily('Arial');
+                  setShouldFlipPunctuation(true);
+                  applySubtitleSettings();
+                }}
+              >
                 אפס הגדרות
               </button>
             </div>
