@@ -43,38 +43,38 @@ function MediaDetails() {
   const creditsCache = useRef(new Map());
   const subtitleContentRef = useRef('');
 
-  // **Authentication Check**
+  // Authentication Check
   useEffect(() => {
     if (!user) {
       navigate('/');
     }
   }, [user, navigate]);
 
-  // **Utility Functions**
+  // Utility function: Log errors to console instead of popping up alerts repeatedly.
   function showErrorPopup(message) {
-    // Log errors to the console instead of repeatedly alerting the user.
     console.error(message);
-    // Uncomment the next line if you wish to show an occasional alert.
+    // Optionally, you can uncomment the alert below if you want to notify the user occasionally.
     // alert(message);
   }
 
-  // **fetchVideoStreams with updated Heroku URL and Referer header**
+  // fetchVideoStreams now uses the Heroku endpoint instead of ngrok.
   async function fetchVideoStreams(title, season = null, episode = null) {
     try {
-      // Use the Heroku domain instead of ngrok
-      let url = `https://tvhero-rezka-stream-api-1f6d3673c9ce.herokuapp.com/fetch_stream?title=${encodeURIComponent(title)}`;
+      const herokuUrl = "https://tvhero-rezka-stream-api-1f6d3673c9ce.herokuapp.com";
+      let url = `${herokuUrl}/fetch_stream?title=${encodeURIComponent(title)}`;
       if (season !== null && episode !== null) {
         url += `&season=${season}&episode=${episode}`;
       }
       console.log(`Fetching stream for title: '${title}', season: ${season}, episode: ${episode}`);
       console.log(`Request URL: ${url}`);
+
       const response = await fetch(url, {
         headers: {
-          'Referer': 'https://tvhero-rezka-stream-api-1f6d3673c9ce.herokuapp.com',
+          'Referer': herokuUrl,
         }
       });
       const data = await response.json();
-      console.log(`Backend response:`, data);
+      console.log("Backend response:", data);
       if (data.error) {
         console.error(`Error from backend: ${data.error}`);
         showErrorPopup(data.error);
@@ -82,8 +82,9 @@ function MediaDetails() {
       }
       if (data.warning) {
         console.warn(`Warning from backend: ${data.warning}`);
+        // Optionally, log the warning without alerting the user.
       }
-      console.log(`Stream URLs received:`, data.stream_urls);
+      console.log("Stream URLs received:", data.stream_urls);
       return data.stream_urls || null;
     } catch (error) {
       console.error(`Fetch error: ${error.message}`);
@@ -206,7 +207,6 @@ function MediaDetails() {
     setEpisodes(seasonData?.episodes || []);
   }
 
-  // Updated: Build full title (with year) for TV series when fetching episode stream URLs
   async function displayEpisodeDetails(seasonNumber, episodeNumber) {
     const cacheKey = `${tmdbId}-season-${seasonNumber}`;
     const seasonData = episodesCache.current.get(cacheKey);
@@ -214,8 +214,9 @@ function MediaDetails() {
 
     const episode = seasonData.episodes.find(ep => ep.episode_number === parseInt(episodeNumber, 10));
     if (episode) {
-      setEpisodeDescription(`פרק ${episode.episode_number}: ${episode.name || 'אין כותרת'} - ${episode.overview || 'תיאור לא זמין'}`);
-      // Build full title including release year for TV series as well
+      setEpisodeDescription(
+        `פרק ${episode.episode_number}: ${episode.name || 'אין כותרת'} - ${episode.overview || 'תיאור לא זמין'}`
+      );
       const fullTitleWithYear = `${mediaData.englishTitle} ${mediaData.releaseYear}`;
       const streamUrls = await fetchVideoStreams(fullTitleWithYear, seasonNumber, episodeNumber);
       if (streamUrls) {
@@ -230,7 +231,7 @@ function MediaDetails() {
     }
   }
 
-  // **Subtitle Utility Functions**
+  // Subtitle Utility Functions
   function timeStringToSeconds(timeStr) {
     const [hours, minutes, rest] = timeStr.split(':');
     const [seconds, milliseconds] = rest.split('.');
@@ -363,7 +364,7 @@ function MediaDetails() {
     }
   }
 
-  // **Effects**
+  // Effects
   useEffect(() => {
     if (!tmdbId) {
       setError('לא סופק מזהה מדיה.');
@@ -379,21 +380,24 @@ function MediaDetails() {
   }, [mediaData, user, tmdbId]);
 
   useEffect(() => {
-    if (mediaType === 'tv' && selectedSeason) fetchAndPopulateEpisodes(tmdbId, selectedSeason);
+    if (mediaType === 'tv' && selectedSeason) {
+      fetchAndPopulateEpisodes(tmdbId, selectedSeason);
+    }
   }, [selectedSeason, mediaType, tmdbId]);
 
   useEffect(() => {
-    if (mediaType === 'tv' && selectedEpisode) displayEpisodeDetails(selectedSeason, selectedEpisode);
+    if (mediaType === 'tv' && selectedEpisode) {
+      displayEpisodeDetails(selectedSeason, selectedEpisode);
+    }
   }, [selectedEpisode, mediaType, tmdbId, selectedSeason]);
 
-  // **Handle Video Source Setup with hls.js**
+  // HLS Video Source Setup
   useEffect(() => {
     if (!currentStreamUrls || !selectedResolution || !videoRef.current) return;
 
     const videoSrc = currentStreamUrls[selectedResolution];
     const currentTime = videoRef.current.currentTime || 0;
 
-    // Clean up any existing HLS instance
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
@@ -401,7 +405,7 @@ function MediaDetails() {
 
     if (Hls.isSupported()) {
       hlsRef.current = new Hls({
-        maxBufferLength: 480, // Buffer up to 8 minutes ahead
+        maxBufferLength: 480,
       });
       hlsRef.current.loadSource(videoSrc);
       hlsRef.current.attachMedia(videoRef.current);
@@ -411,10 +415,9 @@ function MediaDetails() {
           const playlist = hlsRef.current.levels[hlsRef.current.currentLevel].details;
           setSegmentCount(playlist.fragments.length);
         } else {
-          setSegmentCount(0); // Default to 0 if details are unavailable
+          setSegmentCount(0);
         }
         videoRef.current.currentTime = currentTime;
-        // Instead of showing popup on play failure, log to console
         videoRef.current.play().catch(err => console.error("Play error:", err));
       });
 
@@ -425,14 +428,12 @@ function MediaDetails() {
               showErrorPopup('שגיאת רשת: לא ניתן לטעון את הווידאו.');
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
-              // Try to recover from media error instead of showing popup repeatedly
               hlsRef.current.recoverMediaError();
               break;
             default:
-              logger.error("Unknown fatal error:", data);
+              console.error("Unknown fatal error:", data);
           }
         }
-        // Non-fatal errors are silently ignored
       });
     } else {
       videoRef.current.src = videoSrc;
@@ -444,7 +445,6 @@ function MediaDetails() {
       setSegmentCount(0);
     }
 
-    // Fetch subtitles if available
     if (imdbIdGlobal) {
       fetchAndDisplayAvailableSubtitles(imdbIdGlobal, mediaType === 'tv' ? selectedSeason : null, mediaType === 'tv' ? selectedEpisode : null);
     }
@@ -468,7 +468,6 @@ function MediaDetails() {
     }
   }, [currentStreamUrls]);
 
-  // **Render Logic**
   const statusText = status === 'watched' ? 'נצפה' : status === 'to-watch' ? 'לצפייה' : 'לסימון';
 
   if (error) return <div style={{ color: 'red', padding: '20px' }}>{error}</div>;
