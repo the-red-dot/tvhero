@@ -204,6 +204,7 @@ function MediaDetails() {
     setEpisodes(seasonData?.episodes || []);
   }
 
+  // Updated: Build full title (with year) for TV series when fetching episode stream URLs
   async function displayEpisodeDetails(seasonNumber, episodeNumber) {
     const cacheKey = `${tmdbId}-season-${seasonNumber}`;
     const seasonData = episodesCache.current.get(cacheKey);
@@ -212,7 +213,9 @@ function MediaDetails() {
     const episode = seasonData.episodes.find(ep => ep.episode_number === parseInt(episodeNumber, 10));
     if (episode) {
       setEpisodeDescription(`פרק ${episode.episode_number}: ${episode.name || 'אין כותרת'} - ${episode.overview || 'תיאור לא זמין'}`);
-      const streamUrls = await fetchVideoStreams(mediaData.englishTitle, seasonNumber, episodeNumber);
+      // Build full title including release year for TV series as well
+      const fullTitleWithYear = `${mediaData.englishTitle} ${mediaData.releaseYear}`;
+      const streamUrls = await fetchVideoStreams(fullTitleWithYear, seasonNumber, episodeNumber);
       if (streamUrls) {
         setCurrentStreamUrls(streamUrls);
         setShowSubtitleControls(true);
