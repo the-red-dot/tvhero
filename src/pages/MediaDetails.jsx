@@ -52,16 +52,17 @@ function MediaDetails() {
 
   // **Utility Functions**
   function showErrorPopup(message) {
-    // Instead of alerting repeatedly, log to console.
+    // Log errors to the console instead of repeatedly alerting the user.
     console.error(message);
-    // Uncomment the next line if you want to show an alert occasionally.
+    // Uncomment the next line if you wish to show an occasional alert.
     // alert(message);
   }
 
-  // **fetchVideoStreams with 'Referer' header**
+  // **fetchVideoStreams with updated Heroku URL and Referer header**
   async function fetchVideoStreams(title, season = null, episode = null) {
     try {
-      let url = `https://627e-2a10-8012-1-7d6-354e-ed8c-330-50ad.ngrok-free.app/fetch_stream?title=${encodeURIComponent(title)}`;
+      // Use the Heroku domain instead of ngrok
+      let url = `https://tvhero-rezka-stream-api-1f6d3673c9ce.herokuapp.com/fetch_stream?title=${encodeURIComponent(title)}`;
       if (season !== null && episode !== null) {
         url += `&season=${season}&episode=${episode}`;
       }
@@ -69,8 +70,7 @@ function MediaDetails() {
       console.log(`Request URL: ${url}`);
       const response = await fetch(url, {
         headers: {
-          'ngrok-skip-browser-warning': 'true',
-          'Referer': 'https://627e-2a10-8012-1-7d6-354e-ed8c-330-50ad.ngrok-free.app'
+          'Referer': 'https://tvhero-rezka-stream-api-1f6d3673c9ce.herokuapp.com',
         }
       });
       const data = await response.json();
@@ -82,8 +82,6 @@ function MediaDetails() {
       }
       if (data.warning) {
         console.warn(`Warning from backend: ${data.warning}`);
-        // Optionally log the warning without an alert:
-        // showErrorPopup(data.warning);
       }
       console.log(`Stream URLs received:`, data.stream_urls);
       return data.stream_urls || null;
@@ -338,10 +336,12 @@ function MediaDetails() {
       } else if (season && episode && allSubs[season]?.[episode]) {
         subtitlesList = allSubs[season][episode];
       }
-      setAvailableSubtitles(subtitlesList.map(sub => ({
-        id: sub.id,
-        label: `${sub.version} (${sub.date ? new Date(sub.date).getFullYear() : 'N/A'}) [${sub.release_group || '-'}]`,
-      })));
+      setAvailableSubtitles(
+        subtitlesList.map(sub => ({
+          id: sub.id,
+          label: `${sub.version} (${sub.date ? new Date(sub.date).getFullYear() : 'N/A'}) [${sub.release_group || '-'}]`,
+        }))
+      );
     } catch (error) {
       setAvailableSubtitles([{ id: '', label: 'שגיאה בטעינת כתוביות' }]);
     }
@@ -414,7 +414,7 @@ function MediaDetails() {
           setSegmentCount(0); // Default to 0 if details are unavailable
         }
         videoRef.current.currentTime = currentTime;
-        // Log error instead of showing an alert if play fails
+        // Instead of showing popup on play failure, log to console
         videoRef.current.play().catch(err => console.error("Play error:", err));
       });
 
@@ -425,13 +425,11 @@ function MediaDetails() {
               showErrorPopup('שגיאת רשת: לא ניתן לטעון את הווידאו.');
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
-              // Try to recover from media error instead of showing popup
+              // Try to recover from media error instead of showing popup repeatedly
               hlsRef.current.recoverMediaError();
               break;
             default:
               logger.error("Unknown fatal error:", data);
-              // Optionally show popup for unknown fatal errors:
-              // showErrorPopup('שגיאה לא ידועה בניגון הווידאו.');
           }
         }
         // Non-fatal errors are silently ignored
