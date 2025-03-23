@@ -43,19 +43,20 @@ function MediaDetails() {
   const creditsCache = useRef(new Map());
   const subtitleContentRef = useRef('');
 
+  // Authentication Check
   useEffect(() => {
     if (!user) {
       navigate('/');
     }
   }, [user, navigate]);
 
-  // Log errors to console (alerts are commented out)
+  // Utility: Log errors to the console.
   function showErrorPopup(message) {
     console.error(message);
-    // alert(message);
+    // Optionally, uncomment alert if needed: alert(message);
   }
 
-  // Use the Heroku endpoint instead of ngrok
+  // fetchVideoStreams now uses your Heroku endpoint.
   async function fetchVideoStreams(title, season = null, episode = null) {
     try {
       const herokuUrl = "https://tvhero-rezka-stream-api-1f6d3673c9ce.herokuapp.com";
@@ -65,7 +66,6 @@ function MediaDetails() {
       }
       console.log(`Fetching stream for title: '${title}', season: ${season}, episode: ${episode}`);
       console.log(`Request URL: ${url}`);
-
       const response = await fetch(url, {
         headers: {
           'Referer': herokuUrl,
@@ -143,8 +143,12 @@ function MediaDetails() {
 
       const releaseYear =
         mType === 'movie'
-          ? heData.release_date ? new Date(heData.release_date).getFullYear() : 'N/A'
-          : heData.first_air_date ? new Date(heData.first_air_date).getFullYear() : 'N/A';
+          ? heData.release_date
+            ? new Date(heData.release_date).getFullYear()
+            : 'N/A'
+          : heData.first_air_date
+          ? new Date(heData.first_air_date).getFullYear()
+            : 'N/A';
 
       let cast = 'אין מידע';
       if (!creditsCache.current.has(_tmdbId)) {
@@ -161,7 +165,9 @@ function MediaDetails() {
         hebrewTitle: heData.title || heData.name || 'אין כותרת בעברית',
         englishTitle: enData.title || enData.name || 'No English Title',
         releaseYear,
-        poster: heData.poster_path ? `https://image.tmdb.org/t/p/w500${heData.poster_path}` : 'https://via.placeholder.com/300x450?text=No+Image',
+        poster: heData.poster_path
+          ? `https://image.tmdb.org/t/p/w500${heData.poster_path}`
+          : 'https://via.placeholder.com/300x450?text=No+Image',
         overview: heData.overview || 'תיאור לא זמין',
         rating: heData.vote_average?.toFixed(1) || 'N/A',
         genres: heData.genres?.map(g => g.name).join(', ') || 'N/A',
@@ -205,7 +211,9 @@ function MediaDetails() {
 
     const episode = seasonData.episodes.find(ep => ep.episode_number === parseInt(episodeNumber, 10));
     if (episode) {
-      setEpisodeDescription(`פרק ${episode.episode_number}: ${episode.name || 'אין כותרת'} - ${episode.overview || 'תיאור לא זמין'}`);
+      setEpisodeDescription(
+        `פרק ${episode.episode_number}: ${episode.name || 'אין כותרת'} - ${episode.overview || 'תיאור לא זמין'}`
+      );
       const fullTitleWithYear = `${mediaData.englishTitle} ${mediaData.releaseYear}`;
       const streamUrls = await fetchVideoStreams(fullTitleWithYear, seasonNumber, episodeNumber);
       if (streamUrls) {
@@ -220,7 +228,7 @@ function MediaDetails() {
     }
   }
 
-  // Subtitle Utility Functions
+  // Subtitle utility functions
   function timeStringToSeconds(timeStr) {
     const [hours, minutes, rest] = timeStr.split(':');
     const [seconds, milliseconds] = rest.split('.');
@@ -393,9 +401,7 @@ function MediaDetails() {
     }
 
     if (Hls.isSupported()) {
-      hlsRef.current = new Hls({
-        maxBufferLength: 480,
-      });
+      hlsRef.current = new Hls({ maxBufferLength: 480 });
       hlsRef.current.loadSource(videoSrc);
       hlsRef.current.attachMedia(videoRef.current);
 
@@ -435,7 +441,11 @@ function MediaDetails() {
     }
 
     if (imdbIdGlobal) {
-      fetchAndDisplayAvailableSubtitles(imdbIdGlobal, mediaType === 'tv' ? selectedSeason : null, mediaType === 'tv' ? selectedEpisode : null);
+      fetchAndDisplayAvailableSubtitles(
+        imdbIdGlobal,
+        mediaType === 'tv' ? selectedSeason : null,
+        mediaType === 'tv' ? selectedEpisode : null
+      );
     }
     const emptyVTT = 'WEBVTT\n\n';
     subtitleContentRef.current = emptyVTT;
@@ -505,11 +515,7 @@ function MediaDetails() {
         <div id="movie-stream" className="movie-stream-container">
           <div>
             <label htmlFor="resolution-select">בחר רזולוציה:</label>
-            <select
-              id="resolution-select"
-              value={selectedResolution}
-              onChange={e => setSelectedResolution(e.target.value)}
-            >
+            <select id="resolution-select" value={selectedResolution} onChange={e => setSelectedResolution(e.target.value)}>
               <option value="">בחר רזולוציה</option>
               {Object.keys(currentStreamUrls).map(res => (
                 <option key={res} value={res}>{res}</option>
@@ -533,11 +539,7 @@ function MediaDetails() {
               ))}
             </select>
             <label htmlFor="episode-select">פרק:</label>
-            <select
-              value={selectedEpisode}
-              onChange={e => setSelectedEpisode(e.target.value)}
-              disabled={!selectedSeason}
-            >
+            <select value={selectedEpisode} onChange={e => setSelectedEpisode(e.target.value)} disabled={!selectedSeason}>
               <option value="">בחר פרק</option>
               {episodes.map(episode => (
                 <option key={episode.episode_number} value={episode.episode_number}>
@@ -551,11 +553,7 @@ function MediaDetails() {
               <h3>{episodeDescription}</h3>
               <div>
                 <label htmlFor="resolution-select">בחר רזולוציה:</label>
-                <select
-                  id="resolution-select"
-                  value={selectedResolution}
-                  onChange={e => setSelectedResolution(e.target.value)}
-                >
+                <select id="resolution-select" value={selectedResolution} onChange={e => setSelectedResolution(e.target.value)}>
                   <option value="">בחר רזולוציה</option>
                   {Object.keys(currentStreamUrls).map(res => (
                     <option key={res} value={res}>{res}</option>
@@ -598,44 +596,19 @@ function MediaDetails() {
             </div>
             <div className="control-group">
               <label htmlFor="font-size">גודל גופן (px):</label>
-              <input
-                type="number"
-                id="font-size"
-                value={fontSize}
-                min="10"
-                max="100"
-                onChange={e => setFontSize(parseInt(e.target.value))}
-              />
+              <input type="number" id="font-size" value={fontSize} min="10" max="100" onChange={e => setFontSize(parseInt(e.target.value))} />
             </div>
             <div className="control-group">
               <label htmlFor="subtitle-color">צבע כתוביות:</label>
-              <input
-                type="color"
-                id="subtitle-color"
-                value={subtitleColor}
-                onChange={e => setSubtitleColor(e.target.value)}
-              />
+              <input type="color" id="subtitle-color" value={subtitleColor} onChange={e => setSubtitleColor(e.target.value)} />
             </div>
             <div className="control-group">
               <label htmlFor="subtitle-position">מיקום כתוביות (%):</label>
-              <input
-                type="number"
-                id="subtitle-position"
-                value={subtitlePosition}
-                min="0"
-                max="100"
-                onChange={e => setSubtitlePosition(parseInt(e.target.value))}
-              />
+              <input type="number" id="subtitle-position" value={subtitlePosition} min="0" max="100" onChange={e => setSubtitlePosition(parseInt(e.target.value))} />
             </div>
             <div className="control-group">
               <label htmlFor="timing-offset">הסטת תזמון (שניות):</label>
-              <input
-                type="number"
-                id="timing-offset"
-                value={timingOffset}
-                step="0.1"
-                onChange={e => setTimingOffset(parseFloat(e.target.value))}
-              />
+              <input type="number" id="timing-offset" value={timingOffset} step="0.1" onChange={e => setTimingOffset(parseFloat(e.target.value))} />
             </div>
             <div className="control-group">
               <label htmlFor="font-family">משפחת גופן:</label>
@@ -648,12 +621,7 @@ function MediaDetails() {
               </select>
             </div>
             <div className="control-group">
-              <input
-                type="checkbox"
-                id="flip-punctuation"
-                checked={shouldFlipPunctuation}
-                onChange={e => setShouldFlipPunctuation(e.target.checked)}
-              />
+              <input type="checkbox" id="flip-punctuation" checked={shouldFlipPunctuation} onChange={e => setShouldFlipPunctuation(e.target.checked)} />
               <label htmlFor="flip-punctuation">הפוך סימני פיסוק</label>
             </div>
             <div className="control-group">
@@ -664,35 +632,25 @@ function MediaDetails() {
                   <option key={sub.id} value={sub.id}>{sub.label}</option>
                 ))}
               </select>
-              <button
-                id="load-selected-subtitles"
-                className="action-button"
-                onClick={() => {
-                  const subId = document.getElementById('available-subtitles').value;
-                  if (!subId) showErrorPopup('לא נבחרו כתוביות.');
-                  else downloadAndLoadSelectedSubtitle(subId);
-                }}
-              >
+              <button id="load-selected-subtitles" className="action-button" onClick={() => {
+                const subId = document.getElementById('available-subtitles').value;
+                if (!subId) showErrorPopup('לא נבחרו כתוביות.');
+                else downloadAndLoadSelectedSubtitle(subId);
+              }}>
                 טען כתוביות נבחרות
               </button>
             </div>
             <div className="button-group">
-              <button id="apply-settings" className="action-button" onClick={applySubtitleSettings}>
-                החל הגדרות
-              </button>
-              <button
-                id="reset-settings"
-                className="action-button"
-                onClick={() => {
-                  setFontSize(60);
-                  setSubtitleColor('#FFFFFF');
-                  setSubtitlePosition(10);
-                  setTimingOffset(0);
-                  setFontFamily('Arial');
-                  setShouldFlipPunctuation(true);
-                  applySubtitleSettings();
-                }}
-              >
+              <button id="apply-settings" className="action-button" onClick={applySubtitleSettings}>החל הגדרות</button>
+              <button id="reset-settings" className="action-button" onClick={() => {
+                setFontSize(60);
+                setSubtitleColor('#FFFFFF');
+                setSubtitlePosition(10);
+                setTimingOffset(0);
+                setFontFamily('Arial');
+                setShouldFlipPunctuation(true);
+                applySubtitleSettings();
+              }}>
                 אפס הגדרות
               </button>
             </div>
