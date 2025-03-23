@@ -61,7 +61,7 @@ function MediaDetails() {
   // **fetchVideoStreams with 'Referer' header**
   async function fetchVideoStreams(title, season = null, episode = null) {
     try {
-      let url = `https://tvhero-rezka-stream-api-1f6d3673c9ce.herokuapp.com//fetch_stream?title=${encodeURIComponent(title)}`;
+      let url = `https://330a-2a10-8012-1-7d6-29e2-2138-79d8-9486.ngrok-free.app/fetch_stream?title=${encodeURIComponent(title)}`;
       if (season !== null && episode !== null) {
         url += `&season=${season}&episode=${episode}`;
       }
@@ -70,7 +70,7 @@ function MediaDetails() {
       const response = await fetch(url, {
         headers: {
           'ngrok-skip-browser-warning': 'true',
-          'Referer': 'https://tvhero-rezka-stream-api-1f6d3673c9ce.herokuapp.com/'
+          'Referer': 'https://330a-2a10-8012-1-7d6-29e2-2138-79d8-9486.ngrok-free.app'
         }
       });
       const data = await response.json();
