@@ -61,7 +61,7 @@ function MediaDetails() {
   // **fetchVideoStreams with 'Referer' header**
   async function fetchVideoStreams(title, season = null, episode = null) {
     try {
-      let url = `https://627e-2a10-8012-1-7d6-354e-ed8c-330-50ad.ngrok-free.app/fetch_stream?title=${encodeURIComponent(title)}`;
+      let url = `https://ac8b-2a10-8012-21-b22a-519d-24cf-fa98-988a.ngrok-free.app/fetch_stream?title=${encodeURIComponent(title)}`;
       if (season !== null && episode !== null) {
         url += `&season=${season}&episode=${episode}`;
       }
@@ -70,7 +70,7 @@ function MediaDetails() {
       const response = await fetch(url, {
         headers: {
           'ngrok-skip-browser-warning': 'true',
-          'Referer': 'https://627e-2a10-8012-1-7d6-354e-ed8c-330-50ad.ngrok-free.app'
+          'Referer': 'https://ac8b-2a10-8012-21-b22a-519d-24cf-fa98-988a.ngrok-free.app'
         }
       });
       const data = await response.json();
